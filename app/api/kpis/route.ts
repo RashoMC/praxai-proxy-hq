@@ -21,12 +21,15 @@ export async function GET() {
         ? Math.round((closedLeads / totalLeads) * 100)
         : 0;
 
+    const pipelineLeads = totalLeads - closedLeads;
+
     return NextResponse.json({
       totalLeads,
       leadsThisWeek,
       messagesSent,
       conversionRate,
       closedLeads,
+      pipelineLeads,
     });
   } catch (error) {
     console.error("Error fetching KPIs:", error);

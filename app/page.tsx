@@ -1,7 +1,5 @@
 import KpiCards from "@/components/KpiCards";
 import AgentOffice from "@/components/AgentOffice";
-import KanbanBoard from "@/components/kanban/KanbanBoard";
-import FollowUps from "@/components/FollowUps";
 
 export const dynamic = "force-dynamic";
 
@@ -28,19 +26,8 @@ export default function Dashboard() {
       {/* KPI Row */}
       <KpiCards />
 
-      {/* Main Grid */}
-      <div className="grid grid-cols-1 xl:grid-cols-4 gap-4">
-        {/* Kanban takes 3/4 */}
-        <div className="xl:col-span-3">
-          <KanbanBoard />
-        </div>
-
-        {/* Right sidebar: Agents + Follow-ups */}
-        <div className="xl:col-span-1 space-y-4">
-          <AgentOffice />
-          <FollowUps />
-        </div>
-      </div>
+      {/* Agent Office */}
+      <AgentOffice />
     </div>
   );
 }

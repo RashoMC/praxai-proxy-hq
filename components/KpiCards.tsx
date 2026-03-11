@@ -1,13 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { TrendingUp, Users, MessageSquare, Target } from "lucide-react";
+import { Users, Target, TrendingUp } from "lucide-react";
 
 interface KpiData {
   totalLeads: number;
-  leadsThisWeek: number;
-  messagesSent: number;
   conversionRate: number;
+  pipelineLeads: number;
 }
 
 export default function KpiCards() {
@@ -34,33 +33,25 @@ export default function KpiCards() {
       bg: "bg-cyan-500/5",
     },
     {
-      label: "Leads This Week",
-      value: kpis?.leadsThisWeek ?? "-",
-      icon: TrendingUp,
-      color: "text-purple-400",
-      border: "border-purple-500/30",
-      bg: "bg-purple-500/5",
-    },
-    {
-      label: "Messages Sent",
-      value: kpis?.messagesSent ?? "-",
-      icon: MessageSquare,
+      label: "Conversion",
+      value: kpis ? `${kpis.conversionRate}%` : "-",
+      icon: Target,
       color: "text-green-400",
       border: "border-green-500/30",
       bg: "bg-green-500/5",
     },
     {
-      label: "Conversion Rate",
-      value: kpis ? `${kpis.conversionRate}%` : "-",
-      icon: Target,
-      color: "text-amber-400",
-      border: "border-amber-500/30",
-      bg: "bg-amber-500/5",
+      label: "Pipeline",
+      value: kpis?.pipelineLeads ?? "-",
+      icon: TrendingUp,
+      color: "text-purple-400",
+      border: "border-purple-500/30",
+      bg: "bg-purple-500/5",
     },
   ];
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+    <div className="grid grid-cols-3 gap-3 mb-6">
       {cards.map(({ label, value, icon: Icon, color, border, bg }) => (
         <div
           key={label}
