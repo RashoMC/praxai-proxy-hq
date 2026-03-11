@@ -1,0 +1,56 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Lead {
+  id           String     @id @default(cuid())
+  company      String
+  contact      String?
+  email        String?
+  linkedin     String?
+  phone        String?
+  priority     String     @default("MEDIUM")
+  status       String     @default("LEAD")
+  source       String?
+  notes        String?
+  screenshot   String?
+  messageDraft String?
+  messageSent  Boolean    @default(false)
+  followUpAt   DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  activities   Activity[]
+}
+
+model Activity {
+  id        String   @id @default(cuid())
+  leadId    String
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  type      String
+  note      String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+}
+
+model Agent {
+  id        String  @id @default(cuid())
+  name      String
+  emoji     String
+  color     String
+  status    String  @default("IDLE")
+  task      String?
+  queueSize Int     @default(0)
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  password  String?
+  createdAt DateTime @default(now())
+}
