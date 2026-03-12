@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
 
-interface Agent {
+interface ApiAgent {
   id: string;
   name: string;
   emoji: string;
@@ -11,11 +11,11 @@ interface Agent {
   status: string;
   task: string | null;
   queueSize: number;
+}
+
+interface Agent extends ApiAgent {
   x: number;
   y: number;
-  activity: string;
-  lastSeen: string | null;
-  updatedAt: string;
 }
 
 // Office grid: 20x15 tiles, each tile 32px
@@ -23,8 +23,17 @@ const GRID_WIDTH = 20;
 const GRID_HEIGHT = 15;
 const TILE_SIZE = 32;
 
+type FurnitureItem = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  type: "desk" | "coffee" | "couch" | "plant" | "server";
+  label?: string;
+};
+
 // Office furniture layout
-const FURNITURE = {
+const FURNITURE: Record<string, FurnitureItem> = {
   markDesk: { x: 2, y: 2, width: 3, height: 2, type: "desk", label: "ANALYTICS" },
   prismDesk: { x: 8, y: 2, width: 3, height: 2, type: "desk", label: "OUTREACH" },
   crafterDesk: { x: 14, y: 2, width: 3, height: 2, type: "desk", label: "BUILD" },
@@ -35,55 +44,36 @@ const FURNITURE = {
   server: { x: 17, y: 10, width: 2, height: 3, type: "server" },
 };
 
-// Pixel art sprites for each agent
-const AGENT_SPRITES: Record<string, string[]> = {
-  Mark: [
-    "░░▓▓▓░░░",
-    "░▓📈▓░░░",
-    "░░▓▓▓░░░",
-    "░▓▓█▓▓░░",
-    "░░▓░▓░░░",
-  ],
-  Prism: [
-    "░░▓▓▓░░░",
-    "░▓🚀▓░░░",
-    "░░▓▓▓░░░",
-    "░▓▓█▓▓░░",
-    "░░▓░▓░░░",
-  ],
-  Crafter: [
-    "░░▓▓▓░░░",
-    "░▓⚒️▓░░░",
-    "░░▓▓▓░░░",
-    "░▓▓█▓▓░░",
-    "░░▓░▓░░░",
-  ],
-};
+const DEFAULT_POSITIONS = [
+  { x: 3, y: 3 },
+  { x: 9, y: 3 },
+  { x: 15, y: 3 },
+];
 
-// Activity messages
-const ACTIVITIES: Record<string, string[]> = {
-  Mark: [
-    "Researching leads on LinkedIn...",
-    "Analyzing pipeline metrics...",
-    "Scoring prospects...",
-    "Getting coffee...",
-    "Reviewing data...",
-  ],
-  Prism: [
-    "Drafting outreach messages...",
-    "Personalizing emails...",
-    "Reviewing responses...",
-    "Getting coffee...",
-    "Planning campaigns...",
-  ],
-  Crafter: [
-    "Writing code...",
-    "Building features...",
-    "Debugging...",
-    "Getting coffee...",
-    "Deploying updates...",
-  ],
-};
+function normalizeAgent(agent: ApiAgent, index: number): Agent {
+  const fallbackPosition = DEFAULT_POSITIONS[index % DEFAULT_POSITIONS.length] ?? { x: 3, y: 3 };
+  const queueSize = Number.isFinite(agent.queueSize) ? agent.queueSize : 0;
+
+  return {
+    ...agent,
+    queueSize,
+    x: fallbackPosition.x,
+    y: fallbackPosition.y,
+  };
+}
+
+function getStatusColor(status: string) {
+  switch (status) {
+    case "WORKING":
+      return "#10b981";
+    case "IDLE":
+      return "#f59e0b";
+    case "PAUSED":
+      return "#ef4444";
+    default:
+      return "#64748b";
+  }
+}
 
 export default function AgentsPage() {
   const [agents, setAgents] = useState<Agent[]>([]);
@@ -91,96 +81,62 @@ export default function AgentsPage() {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [activityLog, setActivityLog] = useState<string[]>([]);
 
-  // Fetch agents
-  const fetchAgents = useCallback(async () => {
-    try {
-      const res = await fetch("/api/agents");
-      if (!res.ok) throw new Error("Failed to fetch");
-      const data = await res.json();
-      
-      // Add positions and activities if not present
-      const agentsWithPositions = data.map((agent: Agent, index: number) => ({
-        ...agent,
-        x: agent.x || [3, 9, 15][index],
-        y: agent.y || [3, 3, 3][index],
-        activity: agent.activity || ACTIVITIES[agent.name]?.[0] || "Working...",
-      }));
-      
-      setAgents(agentsWithPositions);
-    } catch (error) {
-      console.error("Error fetching agents:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  // Simulate agent movement
-  const simulateActivity = useCallback(() => {
-    setAgents((prev) => {
-      return prev.map((agent) => {
-        const hour = currentTime.getHours();
-        const isNight = hour < 9 || hour >= 23;
-        
-        // Night time: agents sleep on couch
-        if (isNight) {
-          return {
-            ...agent,
-            x: 3 + Math.floor(Math.random() * 2),
-            y: 11,
-            status: "SLEEPING",
-            activity: "💤 Sleeping...",
-          };
-        }
-        
-        // Day time: random movement
-        const activities = ACTIVITIES[agent.name] || ["Working..."];
-        const randomActivity = activities[Math.floor(Math.random() * activities.length)];
-        
-        // Move to different locations based on activity
-        let newX = agent.x;
-        let newY = agent.y;
-        
-        if (randomActivity.includes("coffee")) {
-          newX = 9;
-          newY = 8;
-        } else if (agent.name === "Mark") {
-          newX = 3;
-          newY = 3;
-        } else if (agent.name === "Prism") {
-          newX = 9;
-          newY = 3;
-        } else {
-          newX = 15;
-          newY = 3;
-        }
-        
-        return {
-          ...agent,
-          x: newX,
-          y: newY,
-          status: randomActivity.includes("coffee") ? "BREAK" : "WORKING",
-          activity: randomActivity,
-        };
-      });
-    });
-    
-    // Add to activity log
-    setActivityLog((prev) => {
-      const newLog = [...prev];
-      agents.forEach((agent) => {
-        if (agent.activity && !newLog.includes(`${agent.name}: ${agent.activity}`)) {
-          newLog.unshift(`${agent.name}: ${agent.activity}`);
-        }
-      });
-      return newLog.slice(0, 10);
-    });
-  }, [agents, currentTime]);
-
   useEffect(() => {
+    let active = true;
+
+    const fetchAgents = async () => {
+      try {
+        const res = await fetch("/api/agents", { cache: "no-store" });
+        if (!res.ok) {
+          throw new Error(`Failed to fetch agents: ${res.status}`);
+        }
+
+        const data: ApiAgent[] = await res.json();
+        if (!active || !Array.isArray(data)) return;
+
+        setAgents((prev) =>
+          data.map((agent, index) => {
+            const normalized = normalizeAgent(agent, index);
+            const existing = prev.find((item) => item.id === normalized.id);
+            return existing
+              ? {
+                  ...normalized,
+                  x: existing.x,
+                  y: existing.y,
+                }
+              : normalized;
+          })
+        );
+
+        setActivityLog((prev) => {
+          const nextLog = [...prev];
+
+          data.forEach((agent) => {
+            const message = `${agent.name}: ${agent.task || "No active task"} (${agent.queueSize} queued)`;
+            if (!nextLog.includes(message)) {
+              nextLog.unshift(message);
+            }
+          });
+
+          return nextLog.slice(0, 10);
+        });
+      } catch (error) {
+        console.error("Error fetching agents:", error);
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    };
+
     fetchAgents();
     const interval = setInterval(fetchAgents, 5000);
-    return () => clearInterval(interval);
-  }, [fetchAgents]);
+
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
+  }, []);
 
   useEffect(() => {
     const timeInterval = setInterval(() => {
@@ -188,11 +144,6 @@ export default function AgentsPage() {
     }, 1000);
     return () => clearInterval(timeInterval);
   }, []);
-
-  useEffect(() => {
-    const activityInterval = setInterval(simulateActivity, 8000);
-    return () => clearInterval(activityInterval);
-  }, [simulateActivity]);
 
   const isNight = currentTime.getHours() < 9 || currentTime.getHours() >= 23;
 
@@ -300,23 +251,15 @@ export default function AgentsPage() {
                 <div
                   className="text-2xl relative"
                   style={{
-                    filter: agent.status === "SLEEPING" ? "grayscale(0.5)" : "none",
-                    opacity: agent.status === "SLEEPING" ? 0.7 : 1,
+                    opacity: agent.status === "PAUSED" ? 0.7 : 1,
                   }}
                 >
-                  {agent.status === "SLEEPING" ? "😴" : agent.emoji}
+                  {agent.emoji}
                   {/* Status dot */}
                   <span
                     className="absolute -top-1 -right-1 w-2 h-2 rounded-full animate-pulse"
                     style={{
-                      backgroundColor:
-                        agent.status === "WORKING"
-                          ? "#10b981"
-                          : agent.status === "BREAK"
-                          ? "#f59e0b"
-                          : agent.status === "SLEEPING"
-                          ? "#6366f1"
-                          : "#ef4444",
+                      backgroundColor: getStatusColor(agent.status),
                     }}
                   />
                 </div>
@@ -371,7 +314,7 @@ export default function AgentsPage() {
                   </span>
                   <span className="text-xs text-slate-500">({agent.queueSize} tasks)</span>
                 </div>
-                <p className="text-xs text-slate-400 truncate">{agent.activity}</p>
+                <p className="text-xs text-slate-400 truncate">{agent.task || "No active task"}</p>
               </div>
             ))}
           </div>
