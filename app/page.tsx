@@ -588,24 +588,26 @@ export default function Dashboard() {
                     <div className="flex items-center gap-3 rounded-sm border border-slate-800 bg-slate-950/30 px-3 py-2">
                       <Cpu size={14} style={{ color: agent.accent }} />
                       <span className="font-mono text-[11px] uppercase tracking-[0.25em] text-slate-400">
-                        Working
+                        {agent.status === 'WORKING' ? 'Working' : agent.status === 'PAUSED' ? 'Paused' : 'Idle'}
                       </span>
-                      <div className="flex items-center gap-1">
-                        {[0, 1, 2].map((dot) => (
-                          <motion.span
-                            key={dot}
-                            className="block h-1.5 w-1.5 rounded-none"
-                            style={{ backgroundColor: agent.accent }}
-                            animate={{ opacity: [0.25, 1, 0.25] }}
-                            transition={{
-                              duration: 1,
-                              repeat: Infinity,
-                              ease: "easeInOut",
-                              delay: dot * 0.18,
-                            }}
-                          />
-                        ))}
-                      </div>
+                      {agent.status === 'WORKING' && (
+                        <div className="flex items-center gap-1">
+                          {[0, 1, 2].map((dot) => (
+                            <motion.span
+                              key={dot}
+                              className="block h-1.5 w-1.5 rounded-none"
+                              style={{ backgroundColor: agent.accent }}
+                              animate={{ opacity: [0.25, 1, 0.25] }}
+                              transition={{
+                                duration: 1,
+                                repeat: Infinity,
+                                ease: "easeInOut",
+                                delay: dot * 0.18,
+                              }}
+                            />
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
 

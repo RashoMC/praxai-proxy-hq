@@ -1,82 +1,159 @@
-# PraxAi Proxy HQ — Build Complete
+# PraxAi Proxy HQ: Todo API + Custom KPI Endpoints
 
-## What Was Built
+## Implemented
 
-### Pages
-| Route | Description |
-|-------|-------------|
-| `/` | Dashboard — KPI cards, drag-drop Kanban, Agent Office panel, Follow-ups |
-| `/leads/new` | Add Lead form with all fields: company, contact, email, phone, LinkedIn, status, priority, source, follow-up date, notes, message draft |
-| `/leads/[id]` | Lead detail — inline edit, activity log, delete, message draft, follow-up |
-| `/settings` | Settings page with Instantly API key (pre-filled), eye toggle, save |
+- Added Prisma models: `Todo`, `CustomKpi`
+- Added enums: `TodoPriority`, `TodoStatus`
+- Added API routes:
+  - `POST /api/todos`
+  - `GET /api/todos`
+  - `PUT /api/todos/[id]`
+  - `DELETE /api/todos/[id]`
+  - `POST /api/kpis/custom`
+  - `GET /api/kpis/custom`
+  - `GET /api/kpis/dashboard`
+- Updated dashboard `/` to show:
+  - Ras todo queue
+  - per-agent custom KPI cards
+- Added seed data for todos, KPIs, and the `Blox` agent
+- Applied migration: `20260312120339_add_todos_custom_kpis`
 
-### Components
-| Component | Description |
-|-----------|-------------|
-| `components/kanban/KanbanBoard.tsx` | Full drag-drop Kanban board using @dnd-kit/core + sortable. 4 columns: LEAD → CONNECT → MESSAGE → CLOSE. Drag cards between columns, optimistic updates. |
-| `components/kanban/LeadCard.tsx` | Sortable lead card with priority badge, contact info, message sent indicator, overdue follow-up indicator |
-| `components/FollowUps.tsx` | Follow-ups sidebar widget pulling from `/api/followups/due` |
-| `components/KpiCards.tsx` | 4 KPI cards: Total Leads, Leads This Week, Messages Sent, Conversion Rate |
-| `components/AgentOffice.tsx` | Live agent status panel: Mark 📈, Prism 🚀, Crafter ⚒️ |
-| `components/Navbar.tsx` | Sticky top nav: Dashboard / Add Lead / Settings |
+## Prisma Models
 
-### API Routes
-| Endpoint | Methods |
-|----------|---------|
-| `/api/leads` | GET (all leads), POST (create) |
-| `/api/leads/[id]` | GET, PUT (update), DELETE |
-| `/api/leads/[id]/activity` | POST (log activity) |
-| `/api/leads/[id]/status` | PUT (quick status change) |
-| `/api/agents` | GET (all agents) |
-| `/api/agents/[id]` | PUT (update agent status/task) |
-| `/api/kpis` | GET (dashboard KPIs) |
-| `/api/followups` | GET (all follow-ups) |
-| `/api/followups/due` | GET (due within 24h) |
-| `/api/settings` | GET, POST (Instantly API key) |
+### `Todo`
 
-### Database
-- **PostgreSQL** running in Docker: `leadflow-postgres` on port 5432
-- **Database**: `praxai_proxy`
-- **Migration**: applied (`20260311164455_init`)
-- **Seed**: 3 agents (Mark, Prism, Crafter), 10 leads across all pipeline stages, activities
+- `id`
+- `title`
+- `description`
+- `priority`: `LOW | MEDIUM | HIGH`
+- `status`: `PENDING | DONE`
+- `agent`
+- `createdAt`
+- `updatedAt`
 
-### Stack
-- Next.js 16 (App Router, TypeScript)
-- Tailwind CSS v4 + shadcn/ui
-- Prisma 7 + PostgreSQL
-- @dnd-kit/core + @dnd-kit/sortable (drag-drop Kanban)
-- date-fns (date formatting)
-- sonner (toast notifications)
-- Pixelify Sans pixel font for headers
+### `CustomKpi`
 
-## How to Run
+- `id`
+- `name`
+- `value` (`Json`)
+- `change`
+- `agent`
+- `timestamp`
+- `createdAt`
+
+## API Examples
+
+### Create todo
 
 ```bash
-cd /home/agent/projects/praxai-proxy-hq
-
-# Ensure postgres is running
-docker ps | grep leadflow-postgres
-
-# Run dev server
-DATABASE_URL="postgresql://leadflow:leadflow@localhost:5432/praxai_proxy" npm run dev
-
-# Open http://localhost:3000
+curl -X POST http://localhost:3000/api/todos \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Ship dashboard QA pass",
+    "description": "Need final visual check before handoff.",
+    "priority": "HIGH",
+    "agent": "Crafter",
+    "status": "PENDING"
+  }'
 ```
 
-## Re-seed Database
+### List todos
+
 ```bash
-DATABASE_URL="postgresql://leadflow:leadflow@localhost:5432/praxai_proxy" npx prisma db seed
+curl "http://localhost:3000/api/todos?status=PENDING&agent=Crafter"
 ```
 
-## Instantly API Key
-Pre-configured in `/api/settings`: `ZTU0MzA4YjYtYmFmMi00YWU4LTk0MTctMzdkNjI1ZTMwMTFlOkhJRFhBTExsY3VDRA==`
+### Update todo status
 
-Change it any time in Settings → Instantly.ai
+```bash
+curl -X PUT http://localhost:3000/api/todos/TODO_ID \
+  -H "Content-Type: application/json" \
+  -d '{"status":"DONE"}'
+```
 
-## Build Status
+### Delete todo
+
+```bash
+curl -X DELETE http://localhost:3000/api/todos/TODO_ID
 ```
-✓ Compiled successfully (Turbopack)
-✓ 15 routes (API + pages)
-✓ All API endpoints returning correct data
-✓ 10 seeded leads, 3 agents, 6 activities
+
+### Report custom KPI
+
+```bash
+curl -X POST http://localhost:3000/api/kpis/custom \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Replies Booked",
+    "value": 27,
+    "change": "+3",
+    "agent": "Prism",
+    "timestamp": "2026-03-12T12:00:00.000Z"
+  }'
 ```
+
+### Get custom KPIs
+
+```bash
+curl "http://localhost:3000/api/kpis/custom?agent=Prism"
+```
+
+### Get dashboard aggregate
+
+```bash
+curl http://localhost:3000/api/kpis/dashboard
+```
+
+Response shape:
+
+```json
+{
+  "overview": {
+    "totalLeads": 10,
+    "leadsThisWeek": 10,
+    "messagesSent": 3,
+    "conversionRate": 20,
+    "closedLeads": 2,
+    "pipelineLeads": 8,
+    "pipelineValue": 16000
+  },
+  "todos": [],
+  "todoSummary": {
+    "total": 3,
+    "pending": 2,
+    "done": 1
+  },
+  "customKpisByAgent": []
+}
+```
+
+## Files Added
+
+- `app/api/todos/route.ts`
+- `app/api/todos/[id]/route.ts`
+- `app/api/kpis/custom/route.ts`
+- `app/api/kpis/dashboard/route.ts`
+- `prisma/migrations/20260312120339_add_todos_custom_kpis/migration.sql`
+
+## Files Updated
+
+- `prisma/schema.prisma`
+- `prisma/seed.ts`
+- `app/page.tsx`
+
+## Verification
+
+- `npx prisma migrate dev --name add_todos_custom_kpis`
+- `npx prisma db seed`
+- `npm run lint`
+- `npm run build`
+- Smoke-tested all new endpoints against local dev server
+
+Smoke test results:
+
+- `POST /api/todos` returned `201`
+- `GET /api/todos?status=PENDING&agent=Crafter` returned `200`
+- `PUT /api/todos/[id]` returned `200`
+- `DELETE /api/todos/[id]` returned `200`
+- `POST /api/kpis/custom` returned `201`
+- `GET /api/kpis/custom?agent=Prism` returned `200`
+- `GET /api/kpis/dashboard` returned `200`
