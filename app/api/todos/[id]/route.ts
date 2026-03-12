@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { TodoStatus } from "@prisma/client";
 import prisma from "@/lib/prisma";
+import { completeTodo } from "@/lib/todo-completion";
 
 function isTodoStatus(value: unknown): value is TodoStatus {
   return typeof value === "string" && Object.values(TodoStatus).includes(value as TodoStatus);
@@ -16,6 +17,23 @@ export async function PUT(
 
     if (!isTodoStatus(body.status)) {
       return NextResponse.json({ error: "Status must be PENDING or DONE" }, { status: 400 });
+    }
+
+    if (body.status === "DONE") {
+      try {
+        const result = await completeTodo(id, {
+          actor: typeof body.actor === "string" ? body.actor : "dashboard",
+          source: "put:/api/todos/[id]",
+        });
+
+        return NextResponse.json(result);
+      } catch (error) {
+        if (error instanceof Error && error.message === "TODO_NOT_FOUND") {
+          return NextResponse.json({ error: "Todo not found" }, { status: 404 });
+        }
+
+        throw error;
+      }
     }
 
     const todo = await prisma.todo.update({

@@ -2,12 +2,13 @@
 
 import Image from "next/image";
 import { useEffect, useEffectEvent, useState } from "react";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   Activity,
   CheckCircle2,
   CircleDollarSign,
   Cpu,
+  LoaderCircle,
   ListTodo,
   ScanSearch,
   Send,
@@ -15,6 +16,7 @@ import {
   Users,
   Wrench,
 } from "lucide-react";
+import { toast } from "sonner";
 
 export const dynamic = "force-dynamic";
 
@@ -65,6 +67,13 @@ type DashboardKpis = {
     items: CustomKpiItem[];
   }>;
 };
+
+type TodoUpdateResponse =
+  | TodoItem
+  | {
+      todo: TodoItem;
+      notifiedAgent: string;
+    };
 
 type AgentBlueprint = {
   name: string;
@@ -167,6 +176,8 @@ export default function Dashboard() {
   const [agents, setAgents] = useState<AgentApi[]>([]);
   const [dashboardKpis, setDashboardKpis] = useState<DashboardKpis | null>(null);
   const [loading, setLoading] = useState(true);
+  const [completingTodoId, setCompletingTodoId] = useState<string | null>(null);
+  const [recentNotifications, setRecentNotifications] = useState<Record<string, string>>({});
 
   const refreshDashboard = useEffectEvent(async () => {
     try {
@@ -242,6 +253,94 @@ export default function Dashboard() {
 
   const customKpisByAgent = dashboardKpis?.customKpisByAgent ?? [];
   const todos = dashboardKpis?.todos ?? [];
+  const pendingTodos = todos.filter((todo) => todo.status === "PENDING");
+  const doneTodos = todos.filter((todo) => todo.status === "DONE");
+
+  const handleMarkDone = async (todo: TodoItem) => {
+    if (completingTodoId) {
+      return;
+    }
+
+    const previousDashboard = dashboardKpis;
+    const optimisticTodo: TodoItem = {
+      ...todo,
+      status: "DONE",
+      updatedAt: new Date().toISOString(),
+    };
+
+    setCompletingTodoId(todo.id);
+    setDashboardKpis((current) => {
+      if (!current) {
+        return current;
+      }
+
+      return {
+        ...current,
+        todos: current.todos.map((item) => (item.id === todo.id ? optimisticTodo : item)),
+        todoSummary: {
+          ...current.todoSummary,
+          pending: Math.max(0, current.todoSummary.pending - 1),
+          done: current.todoSummary.done + 1,
+        },
+      };
+    });
+
+    try {
+      const response = await fetch(`/api/todos/${todo.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "DONE", actor: "dashboard" }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to complete todo");
+      }
+
+      const data = await response.json() as TodoUpdateResponse;
+      const updatedTodo = "todo" in data ? data.todo : data;
+      const notifiedAgent = "todo" in data ? data.notifiedAgent : updatedTodo.agent;
+
+      setDashboardKpis((current) => {
+        if (!current) {
+          return current;
+        }
+
+        const nextTodos = current.todos
+          .map((item) => (item.id === updatedTodo.id ? updatedTodo : item))
+          .sort((a, b) => {
+            if (a.status !== b.status) {
+              return a.status.localeCompare(b.status);
+            }
+
+            return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+          });
+
+        return {
+          ...current,
+          todos: nextTodos,
+        };
+      });
+
+      setRecentNotifications((current) => ({ ...current, [updatedTodo.id]: notifiedAgent }));
+      window.setTimeout(() => {
+        setRecentNotifications((current) => {
+          const next = { ...current };
+          delete next[updatedTodo.id];
+          return next;
+        });
+      }, 5000);
+
+      toast.success(`Notified ${notifiedAgent}`, {
+        description: `"${updatedTodo.title}" moved to Done.`,
+      });
+    } catch (error) {
+      console.error(error);
+      setDashboardKpis(previousDashboard);
+      toast.error("Failed to complete todo");
+    } finally {
+      setCompletingTodoId(null);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -355,40 +454,129 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="space-y-3">
+          <div className="grid gap-4 lg:grid-cols-2">
             {todos.length > 0 ? (
-              todos.map((todo) => (
-                <article
-                  key={todo.id}
-                  className="rounded-sm border border-slate-800 bg-slate-950/40 p-3"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        {todo.status === "DONE" ? (
-                          <CheckCircle2 size={15} className="text-emerald-400" />
-                        ) : (
-                          <ListTodo size={15} className="text-amber-300" />
-                        )}
-                        <h3 className="text-sm font-semibold text-slate-100">{todo.title}</h3>
-                      </div>
-                      {todo.description ? (
-                        <p className="mt-2 text-sm leading-6 text-slate-400">{todo.description}</p>
-                      ) : null}
-                    </div>
-                    <div className="flex flex-col items-end gap-2">
-                      <span className="rounded-sm border border-cyan-400/20 bg-cyan-400/8 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.25em] text-cyan-200">
-                        {todo.agent}
-                      </span>
-                      <span className="rounded-sm border border-slate-700 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.25em] text-slate-400">
-                        {todo.priority}
-                      </span>
-                    </div>
+              <>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-amber-300/70">
+                      Pending
+                    </p>
+                    <span className="text-xs text-slate-500">{pendingTodos.length} open</span>
                   </div>
-                </article>
-              ))
+                  <AnimatePresence initial={false}>
+                    {pendingTodos.map((todo) => (
+                      <motion.article
+                        key={todo.id}
+                        layout
+                        initial={{ opacity: 0, y: 12 }}
+                        animate={{
+                          opacity: 1,
+                          y: 0,
+                          scale: completingTodoId === todo.id ? 0.98 : 1,
+                        }}
+                        exit={{ opacity: 0, x: -24, scale: 0.96 }}
+                        className="rounded-sm border border-slate-800 bg-slate-950/40 p-3"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <ListTodo size={15} className="text-amber-300" />
+                              <h3 className="text-sm font-semibold text-slate-100">{todo.title}</h3>
+                            </div>
+                            {todo.description ? (
+                              <p className="mt-2 text-sm leading-6 text-slate-400">{todo.description}</p>
+                            ) : null}
+                          </div>
+                          <div className="flex flex-col items-end gap-2">
+                            <span className="rounded-sm border border-cyan-400/20 bg-cyan-400/8 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.25em] text-cyan-200">
+                              {todo.agent}
+                            </span>
+                            <span className="rounded-sm border border-slate-700 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.25em] text-slate-400">
+                              {todo.priority}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => void handleMarkDone(todo)}
+                              disabled={completingTodoId !== null}
+                              className="inline-flex items-center gap-1 rounded-sm border border-emerald-400/30 bg-emerald-400/10 px-2.5 py-1.5 text-[11px] font-mono uppercase tracking-[0.2em] text-emerald-200 transition hover:bg-emerald-400/20 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              {completingTodoId === todo.id ? (
+                                <>
+                                  <LoaderCircle size={12} className="animate-spin" />
+                                  Completing
+                                </>
+                              ) : (
+                                <>
+                                  <CheckCircle2 size={12} />
+                                  Mark Done
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      </motion.article>
+                    ))}
+                  </AnimatePresence>
+                  {pendingTodos.length === 0 ? (
+                    <div className="rounded-sm border border-dashed border-slate-700 px-4 py-6 text-sm text-slate-500">
+                      No pending todos.
+                    </div>
+                  ) : null}
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-emerald-300/70">
+                      Done
+                    </p>
+                    <span className="text-xs text-slate-500">{doneTodos.length} completed</span>
+                  </div>
+                  <AnimatePresence initial={false}>
+                    {doneTodos.map((todo) => (
+                      <motion.article
+                        key={todo.id}
+                        layout
+                        initial={{ opacity: 0, x: 24, scale: 0.96 }}
+                        animate={{ opacity: 1, x: 0, scale: 1 }}
+                        className="rounded-sm border border-emerald-500/20 bg-emerald-500/5 p-3"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <CheckCircle2 size={15} className="text-emerald-400" />
+                              <h3 className="text-sm font-semibold text-slate-100">{todo.title}</h3>
+                            </div>
+                            {todo.description ? (
+                              <p className="mt-2 text-sm leading-6 text-slate-400">{todo.description}</p>
+                            ) : null}
+                            {recentNotifications[todo.id] ? (
+                              <p className="mt-2 text-xs font-mono uppercase tracking-[0.22em] text-emerald-300">
+                                {`Notified ${recentNotifications[todo.id]}`}
+                              </p>
+                            ) : null}
+                          </div>
+                          <div className="flex flex-col items-end gap-2">
+                            <span className="rounded-sm border border-cyan-400/20 bg-cyan-400/8 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.25em] text-cyan-200">
+                              {todo.agent}
+                            </span>
+                            <span className="rounded-sm border border-slate-700 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.25em] text-slate-400">
+                              {todo.priority}
+                            </span>
+                          </div>
+                        </div>
+                      </motion.article>
+                    ))}
+                  </AnimatePresence>
+                  {doneTodos.length === 0 ? (
+                    <div className="rounded-sm border border-dashed border-slate-700 px-4 py-6 text-sm text-slate-500">
+                      Completed todos will land here.
+                    </div>
+                  ) : null}
+                </div>
+              </>
             ) : (
-              <div className="rounded-sm border border-dashed border-slate-700 px-4 py-6 text-sm text-slate-500">
+              <div className="rounded-sm border border-dashed border-slate-700 px-4 py-6 text-sm text-slate-500 lg:col-span-2">
                 No agent todos reported.
               </div>
             )}
