@@ -3,7 +3,7 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import Link from "next/link";
-import { Mail, Linkedin, Clock, GripVertical } from "lucide-react";
+import { Mail, Clock, GripVertical } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import type { Lead } from "./KanbanBoard";
 

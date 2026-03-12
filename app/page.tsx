@@ -5,8 +5,10 @@ import { useEffect, useEffectEvent, useState } from "react";
 import { motion } from "framer-motion";
 import {
   Activity,
+  CheckCircle2,
   CircleDollarSign,
   Cpu,
+  ListTodo,
   ScanSearch,
   Send,
   Sparkles,
@@ -27,10 +29,41 @@ type AgentApi = {
   lastSeen?: string | null;
 };
 
-type KpiData = {
-  totalLeads: number;
-  conversionRate: number;
-  pipelineValue: number;
+type TodoItem = {
+  id: string;
+  title: string;
+  description: string | null;
+  priority: "LOW" | "MEDIUM" | "HIGH";
+  status: "PENDING" | "DONE";
+  agent: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+type CustomKpiItem = {
+  id: string;
+  name: string;
+  value: string | number | boolean | null | Record<string, unknown> | Array<unknown>;
+  change: string | null;
+  timestamp: string;
+};
+
+type DashboardKpis = {
+  overview: {
+    totalLeads: number;
+    conversionRate: number;
+    pipelineValue: number;
+  };
+  todos: TodoItem[];
+  todoSummary: {
+    total: number;
+    pending: number;
+    done: number;
+  };
+  customKpisByAgent: Array<{
+    agent: string;
+    items: CustomKpiItem[];
+  }>;
 };
 
 type AgentBlueprint = {
@@ -95,6 +128,18 @@ function formatCurrency(value: number) {
   }).format(value);
 }
 
+function formatKpiValue(value: CustomKpiItem["value"]) {
+  if (typeof value === "number") {
+    return new Intl.NumberFormat("en-US").format(value);
+  }
+
+  if (typeof value === "string") {
+    return value;
+  }
+
+  return JSON.stringify(value);
+}
+
 function getStatusTone(status: string) {
   switch (status) {
     case "WORKING":
@@ -120,14 +165,14 @@ function getStatusTone(status: string) {
 
 export default function Dashboard() {
   const [agents, setAgents] = useState<AgentApi[]>([]);
-  const [kpis, setKpis] = useState<KpiData | null>(null);
+  const [dashboardKpis, setDashboardKpis] = useState<DashboardKpis | null>(null);
   const [loading, setLoading] = useState(true);
 
   const refreshDashboard = useEffectEvent(async () => {
     try {
       const [agentsRes, kpisRes] = await Promise.all([
         fetch("/api/agents", { cache: "no-store" }),
-        fetch("/api/kpis", { cache: "no-store" }),
+        fetch("/api/kpis/dashboard", { cache: "no-store" }),
       ]);
 
       if (!agentsRes.ok || !kpisRes.ok) {
@@ -136,11 +181,11 @@ export default function Dashboard() {
 
       const [agentData, kpiData] = await Promise.all([
         agentsRes.json() as Promise<AgentApi[]>,
-        kpisRes.json() as Promise<KpiData>,
+        kpisRes.json() as Promise<DashboardKpis>,
       ]);
 
       setAgents(Array.isArray(agentData) ? agentData : []);
-      setKpis(kpiData);
+      setDashboardKpis(kpiData);
     } catch (error) {
       console.error(error);
     } finally {
@@ -174,26 +219,29 @@ export default function Dashboard() {
   const kpiCards = [
     {
       label: "Total Leads",
-      value: kpis ? String(kpis.totalLeads) : "--",
+      value: dashboardKpis ? String(dashboardKpis.overview.totalLeads) : "--",
       icon: Users,
       accent: "#38bdf8",
       note: "Tracked across the full pipeline",
     },
     {
       label: "Conversion Rate",
-      value: kpis ? `${kpis.conversionRate}%` : "--",
+      value: dashboardKpis ? `${dashboardKpis.overview.conversionRate}%` : "--",
       icon: Activity,
       accent: "#fb7185",
       note: "Closed deals vs. total leads",
     },
     {
       label: "Pipeline Value",
-      value: kpis ? formatCurrency(kpis.pipelineValue) : "--",
+      value: dashboardKpis ? formatCurrency(dashboardKpis.overview.pipelineValue) : "--",
       icon: CircleDollarSign,
       accent: "#22c55e",
       note: "Estimated open pipeline value",
     },
   ];
+
+  const customKpisByAgent = dashboardKpis?.customKpisByAgent ?? [];
+  const todos = dashboardKpis?.todos ?? [];
 
   return (
     <div className="space-y-6">
@@ -281,6 +329,146 @@ export default function Dashboard() {
             </div>
           </motion.div>
         ))}
+      </section>
+
+      <section className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
+        <motion.section
+          className="relative overflow-hidden rounded-sm border border-amber-400/20 bg-[#0b1320] p-4 shadow-[0_0_0_1px_rgba(251,191,36,0.08),inset_0_0_32px_rgba(251,191,36,0.06)]"
+          initial={{ opacity: 0, y: 18 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.12 }}
+        >
+          <div className="mb-4 flex items-start justify-between gap-3">
+            <div>
+              <p className="font-mono text-[10px] uppercase tracking-[0.35em] text-amber-300/70">
+                Ras Inbox
+              </p>
+              <h2
+                className="mt-1 text-xl font-bold text-amber-200"
+                style={{ fontFamily: "var(--font-pixelify)" }}
+              >
+                Agent Todo Queue
+              </h2>
+            </div>
+            <div className="rounded-sm border border-amber-400/20 bg-amber-400/8 px-3 py-2 font-mono text-[11px] text-amber-100">
+              {dashboardKpis ? `${dashboardKpis.todoSummary.pending} pending / ${dashboardKpis.todoSummary.done} done` : "Loading"}
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            {todos.length > 0 ? (
+              todos.map((todo) => (
+                <article
+                  key={todo.id}
+                  className="rounded-sm border border-slate-800 bg-slate-950/40 p-3"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        {todo.status === "DONE" ? (
+                          <CheckCircle2 size={15} className="text-emerald-400" />
+                        ) : (
+                          <ListTodo size={15} className="text-amber-300" />
+                        )}
+                        <h3 className="text-sm font-semibold text-slate-100">{todo.title}</h3>
+                      </div>
+                      {todo.description ? (
+                        <p className="mt-2 text-sm leading-6 text-slate-400">{todo.description}</p>
+                      ) : null}
+                    </div>
+                    <div className="flex flex-col items-end gap-2">
+                      <span className="rounded-sm border border-cyan-400/20 bg-cyan-400/8 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.25em] text-cyan-200">
+                        {todo.agent}
+                      </span>
+                      <span className="rounded-sm border border-slate-700 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.25em] text-slate-400">
+                        {todo.priority}
+                      </span>
+                    </div>
+                  </div>
+                </article>
+              ))
+            ) : (
+              <div className="rounded-sm border border-dashed border-slate-700 px-4 py-6 text-sm text-slate-500">
+                No agent todos reported.
+              </div>
+            )}
+          </div>
+        </motion.section>
+
+        <motion.section
+          className="relative overflow-hidden rounded-sm border border-emerald-400/20 bg-[#08131f] p-4 shadow-[0_0_0_1px_rgba(74,222,128,0.08),inset_0_0_32px_rgba(74,222,128,0.06)]"
+          initial={{ opacity: 0, y: 18 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.18 }}
+        >
+          <div className="mb-4">
+            <p className="font-mono text-[10px] uppercase tracking-[0.35em] text-emerald-300/70">
+              Agent Telemetry
+            </p>
+            <h2
+              className="mt-1 text-xl font-bold text-emerald-200"
+              style={{ fontFamily: "var(--font-pixelify)" }}
+            >
+              Custom KPI Cards
+            </h2>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            {customKpisByAgent.length > 0 ? (
+              customKpisByAgent.map((agentKpi) => {
+                const agentAccent =
+                  AGENT_BLUEPRINTS.find((agent) => agent.name === agentKpi.agent)?.accent ?? "#38bdf8";
+
+                return (
+                  <article
+                    key={agentKpi.agent}
+                    className="rounded-sm border bg-slate-950/35 p-3"
+                    style={{ borderColor: `${agentAccent}33` }}
+                  >
+                    <div className="mb-3 flex items-center justify-between gap-2">
+                      <h3
+                        className="text-lg font-bold"
+                        style={{
+                          color: agentAccent,
+                          fontFamily: "var(--font-pixelify)",
+                        }}
+                      >
+                        {agentKpi.agent}
+                      </h3>
+                      <span className="font-mono text-[10px] uppercase tracking-[0.25em] text-slate-500">
+                        Latest
+                      </span>
+                    </div>
+                    <div className="space-y-2">
+                      {agentKpi.items.map((item) => (
+                        <div
+                          key={item.id}
+                          className="rounded-sm border border-slate-800 bg-[#0b1627] px-3 py-2"
+                        >
+                          <div className="flex items-center justify-between gap-3">
+                            <span className="font-mono text-[10px] uppercase tracking-[0.25em] text-slate-500">
+                              {item.name}
+                            </span>
+                            {item.change ? (
+                              <span className="text-xs text-emerald-300">{item.change}</span>
+                            ) : null}
+                          </div>
+                          <div className="mt-2 text-2xl font-bold text-slate-100">
+                            {formatKpiValue(item.value)}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </article>
+                );
+              })
+            ) : (
+              <div className="rounded-sm border border-dashed border-slate-700 px-4 py-6 text-sm text-slate-500 sm:col-span-2">
+                No custom KPI reports yet.
+              </div>
+            )}
+          </div>
+        </motion.section>
       </section>
 
       <motion.section

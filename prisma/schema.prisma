@@ -50,6 +50,45 @@ model Agent {
   updatedAt DateTime  @updatedAt
 }
 
+enum TodoPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum TodoStatus {
+  PENDING
+  DONE
+}
+
+model Todo {
+  id          String       @id @default(cuid())
+  title       String
+  description String?
+  priority    TodoPriority @default(MEDIUM)
+  status      TodoStatus   @default(PENDING)
+  agent       String
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([agent])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model CustomKpi {
+  id        String   @id @default(cuid())
+  name      String
+  value     Json
+  change    String?
+  agent     String
+  timestamp DateTime
+  createdAt DateTime @default(now())
+
+  @@index([agent])
+  @@index([timestamp])
+}
+
 model User {
   id        String   @id @default(cuid())
   email     String   @unique

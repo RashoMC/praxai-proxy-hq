@@ -49,12 +49,11 @@ export default function SettingsPage() {
           className="text-xl font-bold text-cyan-400 mb-1"
           style={{ fontFamily: "var(--font-pixelify)" }}
         >
-          // SETTINGS
+          {"// SETTINGS"}
         </h1>
         <p className="text-sm text-slate-400">Configure API keys and integrations</p>
       </div>
 
-      {/* Instantly Integration */}
       <div className="bg-slate-800 border border-slate-700 rounded-sm p-5">
         <div className="flex items-center gap-3 mb-4">
           <div className="w-8 h-8 bg-cyan-500/10 border border-cyan-500/30 rounded-sm flex items-center justify-center">
@@ -110,7 +109,6 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* Future integrations placeholder */}
       <div className="bg-slate-800 border border-slate-700/50 rounded-sm p-5 opacity-50">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-slate-700 border border-slate-600 rounded-sm flex items-center justify-center">
@@ -135,7 +133,6 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* Save */}
       <div className="flex justify-end">
         <button
           onClick={handleSave}

@@ -13,12 +13,6 @@ interface Agent {
   queueSize: number;
 }
 
-const AGENT_POSITIONS: Record<string, { x: number; y: number }> = {
-  Mark: { x: 3, y: 3 },
-  Prism: { x: 9, y: 3 },
-  Crafter: { x: 15, y: 3 },
-};
-
 function getStatusColor(status: string) {
   switch (status) {
     case "WORKING": return "#10b981";
@@ -83,7 +77,6 @@ export default function AgentsPage() {
       
       <div className="grid grid-cols-3 gap-4">
         {agents.map((agent) => {
-          const pos = AGENT_POSITIONS[agent.name] || { x: 3, y: 3 };
           return (
             <motion.div
               key={agent.id}

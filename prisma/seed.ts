@@ -6,6 +6,8 @@ async function main() {
   // Clean existing data
   await prisma.activity.deleteMany();
   await prisma.lead.deleteMany();
+  await prisma.todo.deleteMany();
+  await prisma.customKpi.deleteMany();
   await prisma.agent.deleteMany();
   await prisma.user.deleteMany();
 
@@ -39,6 +41,16 @@ async function main() {
         status: "IDLE",
         task: null,
         queueSize: 0,
+      },
+    }),
+    prisma.agent.create({
+      data: {
+        name: "Blox",
+        emoji: "🧱",
+        color: "#22c55e",
+        status: "WORKING",
+        task: "Tracking creator growth and surfacing community KPI changes",
+        queueSize: 2,
       },
     }),
   ]);
@@ -250,6 +262,74 @@ async function main() {
       name: "Rasmus",
     },
   });
+
+  const customKpiTimestamp = new Date();
+
+  await Promise.all([
+    prisma.todo.create({
+      data: {
+        title: "Approve Blox giveaway brief",
+        description: "Need final sign-off before community drop goes live.",
+        priority: "HIGH",
+        status: "PENDING",
+        agent: "Blox",
+      },
+    }),
+    prisma.todo.create({
+      data: {
+        title: "Review Prism reply sequence",
+        description: "Prism wants approval on the new founder follow-up copy.",
+        priority: "MEDIUM",
+        status: "PENDING",
+        agent: "Prism",
+      },
+    }),
+    prisma.todo.create({
+      data: {
+        title: "Confirm Crafter KPI schema",
+        description: "Crafter needs the final dashboard metric names before shipping.",
+        priority: "LOW",
+        status: "DONE",
+        agent: "Crafter",
+      },
+    }),
+    prisma.customKpi.create({
+      data: {
+        name: "Followers",
+        value: 12430,
+        change: "+8.4%",
+        agent: "Blox",
+        timestamp: customKpiTimestamp,
+      },
+    }),
+    prisma.customKpi.create({
+      data: {
+        name: "Messages Sent",
+        value: 318,
+        change: "+14%",
+        agent: "Prism",
+        timestamp: customKpiTimestamp,
+      },
+    }),
+    prisma.customKpi.create({
+      data: {
+        name: "Features Shipped",
+        value: 6,
+        change: "+2",
+        agent: "Crafter",
+        timestamp: customKpiTimestamp,
+      },
+    }),
+    prisma.customKpi.create({
+      data: {
+        name: "Prospects Researched",
+        value: 74,
+        change: "+11",
+        agent: "Mark",
+        timestamp: customKpiTimestamp,
+      },
+    }),
+  ]);
 
   console.log("Seed complete!");
 }
