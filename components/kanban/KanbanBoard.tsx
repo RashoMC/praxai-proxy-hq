@@ -39,7 +39,28 @@ const COLUMNS = [
   { id: "CONNECT", label: "Connect", color: "border-blue-500", dot: "bg-blue-400", textColor: "text-blue-300", bg: "bg-blue-500/5" },
   { id: "MESSAGE", label: "Message", color: "border-purple-500", dot: "bg-purple-400", textColor: "text-purple-300", bg: "bg-purple-500/5" },
   { id: "CLOSE", label: "Close", color: "border-green-500", dot: "bg-green-400", textColor: "text-green-300", bg: "bg-green-500/5" },
+  { id: "REJECTED", label: "Rejected", color: "border-rose-500", dot: "bg-rose-400", textColor: "text-rose-300", bg: "bg-rose-500/5" },
 ];
+
+const STATUS_TO_COLUMN: Record<string, (typeof COLUMNS)[number]["id"]> = {
+  NO_RESPONSE: "LEAD",
+  CONNECTED: "CONNECT",
+  RESPONDED: "MESSAGE",
+  MEETING_BOOKED: "CLOSE",
+  REJECTED: "REJECTED",
+  LEAD: "LEAD",
+  CONNECT: "CONNECT",
+  MESSAGE: "MESSAGE",
+  CLOSE: "CLOSE",
+};
+
+const COLUMN_TO_STATUS: Record<(typeof COLUMNS)[number]["id"], string> = {
+  LEAD: "NO_RESPONSE",
+  CONNECT: "CONNECTED",
+  MESSAGE: "RESPONDED",
+  CLOSE: "MEETING_BOOKED",
+  REJECTED: "REJECTED",
+};
 
 export default function KanbanBoard() {
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -64,8 +85,10 @@ export default function KanbanBoard() {
     fetchLeads();
   }, [fetchLeads]);
 
-  const getColumnLeads = (status: string) =>
-    leads.filter((l) => l.status === status);
+  const getColumnId = (status: string) => STATUS_TO_COLUMN[status] ?? "LEAD";
+
+  const getColumnLeads = (columnId: string) =>
+    leads.filter((lead) => getColumnId(lead.status) === columnId);
 
   const handleDragStart = (event: DragStartEvent) => {
     const lead = leads.find((l) => l.id === event.active.id);
@@ -81,14 +104,18 @@ export default function KanbanBoard() {
     if (!lead) return;
 
     // over.id is either a column id (droppable) or a lead id (sortable)
-    let targetStatus: string | undefined;
+    let targetColumnId: string | undefined;
     if (COLUMNS.find((c) => c.id === over.id)) {
-      targetStatus = over.id as string;
+      targetColumnId = over.id as string;
     } else {
-      // over a lead card — find what column that lead is in
+      // over a lead card — find what column that lead maps to
       const overLead = leads.find((l) => l.id === over.id);
-      targetStatus = overLead?.status;
+      targetColumnId = overLead ? getColumnId(overLead.status) : undefined;
     }
+
+    const targetStatus = targetColumnId
+      ? COLUMN_TO_STATUS[targetColumnId as keyof typeof COLUMN_TO_STATUS]
+      : undefined;
 
     if (!targetStatus || lead.status === targetStatus) return;
 
@@ -110,7 +137,7 @@ export default function KanbanBoard() {
 
   if (loading) {
     return (
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
         {COLUMNS.map((col) => (
           <div key={col.id} className="bg-slate-800 border border-slate-700 rounded-sm p-3">
             <div className="h-5 w-20 bg-slate-700 animate-pulse rounded-sm mb-3" />
@@ -130,7 +157,7 @@ export default function KanbanBoard() {
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
         {COLUMNS.map((col) => (
           <KanbanColumn
             key={col.id}
