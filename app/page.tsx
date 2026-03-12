@@ -1,33 +1,476 @@
-import KpiCards from "@/components/KpiCards";
-import AgentOffice from "@/components/AgentOffice";
+"use client";
+
+import Image from "next/image";
+import { useEffect, useEffectEvent, useState } from "react";
+import { motion } from "framer-motion";
+import {
+  Activity,
+  CircleDollarSign,
+  Cpu,
+  ScanSearch,
+  Send,
+  Sparkles,
+  Users,
+  Wrench,
+} from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
+type AgentApi = {
+  id: string;
+  name: string;
+  emoji: string;
+  color: string;
+  status: string;
+  task: string | null;
+  queueSize: number;
+  lastSeen?: string | null;
+};
+
+type KpiData = {
+  totalLeads: number;
+  conversionRate: number;
+  pipelineValue: number;
+};
+
+type AgentBlueprint = {
+  name: string;
+  accent: string;
+  glow: string;
+  avatar: string;
+  defaultTask: string;
+  role: string;
+  icon: typeof ScanSearch;
+  seat: string;
+};
+
+const AGENT_BLUEPRINTS: AgentBlueprint[] = [
+  {
+    name: "Mark",
+    accent: "#f97316",
+    glow: "rgba(249, 115, 22, 0.45)",
+    avatar: "/agents/mark.jpg",
+    defaultTask: "Researching leads",
+    role: "Lead Intel",
+    icon: ScanSearch,
+    seat: "lg:col-span-6 lg:row-span-6",
+  },
+  {
+    name: "Prism",
+    accent: "#38bdf8",
+    glow: "rgba(56, 189, 248, 0.45)",
+    avatar: "/agents/prism.jpg",
+    defaultTask: "Drafting messages",
+    role: "Outreach Ops",
+    icon: Send,
+    seat: "lg:col-span-6 lg:row-span-6",
+  },
+  {
+    name: "Crafter",
+    accent: "#a855f7",
+    glow: "rgba(168, 85, 247, 0.45)",
+    avatar: "/agents/crafter.jpg",
+    defaultTask: "Building features",
+    role: "Product Build",
+    icon: Wrench,
+    seat: "lg:col-span-6 lg:row-span-6",
+  },
+  {
+    name: "Blox",
+    accent: "#22c55e",
+    glow: "rgba(34, 197, 94, 0.45)",
+    avatar: "/agents/blox.jpg",
+    defaultTask: "Managing community",
+    role: "Community Desk",
+    icon: Sparkles,
+    seat: "lg:col-span-6 lg:row-span-6",
+  },
+];
+
+function formatCurrency(value: number) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
+function getStatusTone(status: string) {
+  switch (status) {
+    case "WORKING":
+      return {
+        label: "Working",
+        text: "text-emerald-300",
+        dot: "bg-emerald-400",
+      };
+    case "PAUSED":
+      return {
+        label: "Paused",
+        text: "text-rose-300",
+        dot: "bg-rose-400",
+      };
+    default:
+      return {
+        label: "Idle",
+        text: "text-amber-300",
+        dot: "bg-amber-400",
+      };
+  }
+}
+
 export default function Dashboard() {
+  const [agents, setAgents] = useState<AgentApi[]>([]);
+  const [kpis, setKpis] = useState<KpiData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const refreshDashboard = useEffectEvent(async () => {
+    try {
+      const [agentsRes, kpisRes] = await Promise.all([
+        fetch("/api/agents", { cache: "no-store" }),
+        fetch("/api/kpis", { cache: "no-store" }),
+      ]);
+
+      if (!agentsRes.ok || !kpisRes.ok) {
+        throw new Error("Dashboard refresh failed");
+      }
+
+      const [agentData, kpiData] = await Promise.all([
+        agentsRes.json() as Promise<AgentApi[]>,
+        kpisRes.json() as Promise<KpiData>,
+      ]);
+
+      setAgents(Array.isArray(agentData) ? agentData : []);
+      setKpis(kpiData);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  });
+
+  useEffect(() => {
+    void refreshDashboard();
+    const interval = window.setInterval(() => {
+      void refreshDashboard();
+    }, 5000);
+
+    return () => window.clearInterval(interval);
+  }, []);
+
+  const agentsByName = new Map(agents.map((agent) => [agent.name, agent]));
+  const officeAgents = AGENT_BLUEPRINTS.map((blueprint) => {
+    const liveAgent = agentsByName.get(blueprint.name);
+    return {
+      ...blueprint,
+      id: liveAgent?.id ?? blueprint.name,
+      color: liveAgent?.color ?? blueprint.accent,
+      status: liveAgent?.status ?? "WORKING",
+      task: liveAgent?.task ?? blueprint.defaultTask,
+      queueSize: liveAgent?.queueSize ?? 1,
+      lastSeen: liveAgent?.lastSeen ?? null,
+    };
+  });
+
+  const kpiCards = [
+    {
+      label: "Total Leads",
+      value: kpis ? String(kpis.totalLeads) : "--",
+      icon: Users,
+      accent: "#38bdf8",
+      note: "Tracked across the full pipeline",
+    },
+    {
+      label: "Conversion Rate",
+      value: kpis ? `${kpis.conversionRate}%` : "--",
+      icon: Activity,
+      accent: "#fb7185",
+      note: "Closed deals vs. total leads",
+    },
+    {
+      label: "Pipeline Value",
+      value: kpis ? formatCurrency(kpis.pipelineValue) : "--",
+      icon: CircleDollarSign,
+      accent: "#22c55e",
+      note: "Estimated open pipeline value",
+    },
+  ];
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1
-          className="text-xl font-bold text-cyan-400"
-          style={{ fontFamily: "var(--font-pixelify)" }}
-        >
-          // PROXY HQ
-        </h1>
-        <span className="text-xs text-slate-500 font-mono">
-          {new Date().toLocaleDateString("en-US", {
-            weekday: "long",
-            year: "numeric",
-            month: "short",
-            day: "numeric",
+      <motion.header
+        className="relative overflow-hidden rounded-sm border border-cyan-400/20 bg-[#07111f] px-5 py-4 shadow-[0_0_0_1px_rgba(8,145,178,0.1),inset_0_0_40px_rgba(8,145,178,0.08)]"
+        initial={{ opacity: 0, y: 14 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35 }}
+      >
+        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(56,189,248,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(56,189,248,0.08)_1px,transparent_1px)] bg-[size:20px_20px]" />
+        <div className="relative flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="font-mono text-[10px] uppercase tracking-[0.35em] text-cyan-300/70">
+              Retro Command Center
+            </p>
+            <h1
+              className="text-2xl font-bold text-cyan-300 md:text-3xl"
+              style={{
+                fontFamily: "var(--font-pixelify)",
+                textShadow: "0 0 18px rgba(34, 211, 238, 0.55)",
+              }}
+            >
+              {"// PROXY HQ"}
+            </h1>
+          </div>
+          <div className="grid grid-cols-2 gap-2 font-mono text-[11px] text-slate-300 md:text-right">
+            <span className="rounded-sm border border-cyan-400/20 bg-cyan-400/5 px-3 py-2">
+              {new Date().toLocaleDateString("en-US", {
+                weekday: "short",
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+              })}
+            </span>
+            <span className="rounded-sm border border-emerald-400/20 bg-emerald-400/5 px-3 py-2">
+              4 stations online
+            </span>
+          </div>
+        </div>
+      </motion.header>
+
+      <section className="grid gap-3 md:grid-cols-3">
+        {kpiCards.map(({ label, value, icon: Icon, accent, note }, index) => (
+          <motion.div
+            key={label}
+            className="relative overflow-hidden rounded-sm border bg-[#0b1627] p-4"
+            style={{
+              borderColor: `${accent}44`,
+              boxShadow: `0 0 0 1px ${accent}1f, inset 0 0 24px ${accent}12`,
+            }}
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: index * 0.07 }}
+          >
+            <div
+              className="pointer-events-none absolute inset-x-0 top-0 h-px"
+              style={{ background: `linear-gradient(90deg, transparent, ${accent}, transparent)` }}
+            />
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-slate-400">
+                  {label}
+                </p>
+                <div
+                  className={`mt-3 text-3xl font-bold ${loading ? "animate-pulse" : ""}`}
+                  style={{
+                    color: accent,
+                    fontFamily: "var(--font-pixelify)",
+                    textShadow: `0 0 16px ${accent}55`,
+                  }}
+                >
+                  {value}
+                </div>
+                <p className="mt-2 text-xs text-slate-500">{note}</p>
+              </div>
+              <div
+                className="rounded-sm border p-2"
+                style={{
+                  borderColor: `${accent}40`,
+                  backgroundColor: `${accent}14`,
+                }}
+              >
+                <Icon size={18} style={{ color: accent }} />
+              </div>
+            </div>
+          </motion.div>
+        ))}
+      </section>
+
+      <motion.section
+        className="relative overflow-hidden rounded-sm border border-slate-800 bg-[#050b14] p-4 shadow-[inset_0_0_80px_rgba(2,6,23,0.95)] md:p-5"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, delay: 0.15 }}
+      >
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.14),transparent_35%),linear-gradient(rgba(15,23,42,0.85),rgba(2,6,23,0.98))]" />
+        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(51,65,85,0.2)_1px,transparent_1px),linear-gradient(90deg,rgba(51,65,85,0.2)_1px,transparent_1px)] bg-[size:26px_26px] opacity-40" />
+        <div className="relative mb-4 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="font-mono text-[10px] uppercase tracking-[0.35em] text-slate-500">
+              Star Office Grid
+            </p>
+            <h2
+              className="text-xl font-bold text-slate-100"
+              style={{ fontFamily: "var(--font-pixelify)" }}
+            >
+              Agent Floor
+            </h2>
+          </div>
+          <div className="flex items-center gap-2 font-mono text-[11px] text-slate-400">
+            <span className="rounded-sm border border-cyan-400/20 bg-cyan-400/5 px-2 py-1">
+              Live poll: 5s
+            </span>
+            <span className="rounded-sm border border-slate-700 px-2 py-1">
+              Neon office mode
+            </span>
+          </div>
+        </div>
+
+        <div className="relative grid gap-4 lg:grid-cols-12">
+          {officeAgents.map((agent, index) => {
+            const statusTone = getStatusTone(agent.status);
+            const AgentIcon = agent.icon;
+
+            return (
+              <motion.article
+                key={agent.name}
+                className={`relative overflow-hidden rounded-sm border bg-[#0a1422] p-4 ${agent.seat}`}
+                style={{
+                  borderColor: `${agent.accent}44`,
+                  boxShadow: `inset 0 0 0 1px ${agent.accent}15, 0 12px 30px rgba(2, 6, 23, 0.32)`,
+                }}
+                initial={{ opacity: 0, scale: 0.97 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.28, delay: 0.08 * index }}
+              >
+                <div
+                  className="pointer-events-none absolute inset-x-0 top-0 h-px"
+                  style={{
+                    background: `linear-gradient(90deg, transparent, ${agent.accent}, transparent)`,
+                  }}
+                />
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div
+                      className="relative h-14 w-14 overflow-hidden rounded-sm border"
+                      style={{
+                        borderColor: `${agent.accent}66`,
+                        boxShadow: `0 0 18px ${agent.glow}`,
+                      }}
+                    >
+                      <Image
+                        src={agent.avatar}
+                        alt={agent.name}
+                        fill
+                        sizes="56px"
+                        className="object-cover"
+                      />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <h3
+                          className="truncate text-lg font-bold"
+                          style={{
+                            color: agent.accent,
+                            fontFamily: "var(--font-pixelify)",
+                            textShadow: `0 0 16px ${agent.glow}`,
+                          }}
+                        >
+                          {agent.name}
+                        </h3>
+                        <span className="font-mono text-[10px] uppercase tracking-[0.25em] text-slate-500">
+                          {agent.role}
+                        </span>
+                      </div>
+                      <div className={`mt-1 flex items-center gap-2 text-xs font-mono ${statusTone.text}`}>
+                        <span className={`h-2 w-2 rounded-full ${statusTone.dot} animate-pulse`} />
+                        {statusTone.label}
+                      </div>
+                    </div>
+                  </div>
+                  <div
+                    className="rounded-sm border px-2 py-1 font-mono text-[10px] uppercase tracking-[0.25em]"
+                    style={{
+                      borderColor: `${agent.accent}36`,
+                      color: agent.accent,
+                      backgroundColor: `${agent.accent}12`,
+                    }}
+                  >
+                    q:{agent.queueSize}
+                  </div>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_160px]">
+                  <div className="space-y-3">
+                    <div className="rounded-sm border border-slate-800 bg-slate-950/40 p-3">
+                      <div className="mb-2 flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.3em] text-slate-500">
+                        <AgentIcon size={12} />
+                        Current Task
+                      </div>
+                      <p className="text-sm leading-6 text-slate-200">{agent.task}</p>
+                    </div>
+
+                    <div className="flex items-center gap-3 rounded-sm border border-slate-800 bg-slate-950/30 px-3 py-2">
+                      <Cpu size={14} style={{ color: agent.accent }} />
+                      <span className="font-mono text-[11px] uppercase tracking-[0.25em] text-slate-400">
+                        Working
+                      </span>
+                      <div className="flex items-center gap-1">
+                        {[0, 1, 2].map((dot) => (
+                          <motion.span
+                            key={dot}
+                            className="block h-1.5 w-1.5 rounded-none"
+                            style={{ backgroundColor: agent.accent }}
+                            animate={{ opacity: [0.25, 1, 0.25] }}
+                            transition={{
+                              duration: 1,
+                              repeat: Infinity,
+                              ease: "easeInOut",
+                              delay: dot * 0.18,
+                            }}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="relative">
+                    <div className="rounded-sm border border-slate-800 bg-[#09101c] p-3">
+                      <motion.div
+                        className="relative mx-auto h-24 w-full max-w-[140px] rounded-sm border-2 bg-[#0b1626]"
+                        style={{
+                          borderColor: `${agent.accent}90`,
+                          boxShadow: `0 0 0 1px ${agent.accent}22, 0 0 26px ${agent.glow}`,
+                        }}
+                        animate={{
+                          boxShadow: [
+                            `0 0 0 1px ${agent.accent}22, 0 0 18px ${agent.glow}`,
+                            `0 0 0 1px ${agent.accent}44, 0 0 34px ${agent.glow}`,
+                            `0 0 0 1px ${agent.accent}22, 0 0 18px ${agent.glow}`,
+                          ],
+                        }}
+                        transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
+                      >
+                        <div
+                          className="absolute inset-2 rounded-[2px]"
+                          style={{
+                            background: `linear-gradient(180deg, ${agent.accent}40 0%, rgba(15, 23, 42, 0.15) 100%)`,
+                          }}
+                        />
+                        <div className="absolute inset-x-3 top-4 h-1 bg-slate-900/60" />
+                        <div className="absolute left-3 top-8 h-2 w-12 bg-slate-900/70" />
+                        <div className="absolute right-3 top-8 h-2 w-8" style={{ backgroundColor: `${agent.accent}88` }} />
+                        <div className="absolute inset-x-3 bottom-4 h-6 border border-slate-900/70 bg-slate-950/45" />
+                      </motion.div>
+                      <div className="mx-auto h-3 w-10 rounded-b-sm bg-slate-700/80" />
+                      <div className="mx-auto h-10 w-full max-w-[150px] rounded-sm border border-slate-800 bg-[#0d1727]">
+                        <div className="grid h-full grid-cols-6 gap-px p-1">
+                          {Array.from({ length: 18 }).map((_, key) => (
+                            <div
+                              key={key}
+                              className="rounded-[1px] bg-slate-800"
+                              style={{
+                                backgroundColor: key % 5 === 0 ? `${agent.accent}55` : undefined,
+                              }}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </motion.article>
+            );
           })}
-        </span>
-      </div>
-
-      {/* KPI Row */}
-      <KpiCards />
-
-      {/* Agent Office */}
-      <AgentOffice />
+        </div>
+      </motion.section>
     </div>
   );
 }

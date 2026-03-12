@@ -5,6 +5,7 @@ export async function GET() {
   try {
     const now = new Date();
     const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const averageDealValue = 2000;
 
     const [totalLeads, leadsThisWeek, messagesSent, closedLeads] =
       await Promise.all([
@@ -22,6 +23,7 @@ export async function GET() {
         : 0;
 
     const pipelineLeads = totalLeads - closedLeads;
+    const pipelineValue = pipelineLeads * averageDealValue;
 
     return NextResponse.json({
       totalLeads,
@@ -30,6 +32,7 @@ export async function GET() {
       conversionRate,
       closedLeads,
       pipelineLeads,
+      pipelineValue,
     });
   } catch (error) {
     console.error("Error fetching KPIs:", error);
