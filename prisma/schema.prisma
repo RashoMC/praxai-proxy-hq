@@ -38,13 +38,15 @@ model Activity {
 }
 
 model Agent {
-  id        String  @id @default(cuid())
-  name      String
+  id        String    @id @default(cuid())
+  name      String    @unique
   emoji     String
   color     String
-  status    String  @default("IDLE")
+  status    String    @default("IDLE")
   task      String?
-  queueSize Int     @default(0)
+  queueSize Int       @default(0)
+  lastSeen  DateTime?
+  updatedAt DateTime  @updatedAt
 }
 
 model User {
