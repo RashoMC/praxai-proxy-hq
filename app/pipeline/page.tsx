@@ -13,7 +13,18 @@ import { useEffect, useState } from "react";
 
 export const dynamic = "force-dynamic";
 
-type LeadStatus = "LEAD" | "CONNECT" | "MESSAGE" | "CLOSE";
+type LeadStatus =
+  | "NO_RESPONSE"
+  | "CONNECTED"
+  | "RESPONDED"
+  | "MEETING_BOOKED"
+  | "REJECTED"
+  | "LEAD"
+  | "CONNECT"
+  | "MESSAGE"
+  | "CLOSE";
+
+type StageId = "LEAD" | "CONNECT" | "MESSAGE" | "CLOSE" | "REJECTED";
 
 interface Activity {
   id: string;
@@ -42,7 +53,7 @@ interface Lead {
 }
 
 const STAGES: Array<{
-  id: LeadStatus;
+  id: StageId;
   label: string;
   icon: PixelMap;
   accent: string;
@@ -90,6 +101,16 @@ const STAGES: Array<{
     border: "rgba(232, 121, 249, 0.4)",
     rail: "from-fuchsia-400/70 to-fuchsia-500/15",
     detail: "Treaty table locking in wins.",
+  },
+  {
+    id: "REJECTED",
+    label: "Rejected",
+    icon: "avatarD",
+    accent: "#fb7185",
+    glow: "rgba(251, 113, 133, 0.24)",
+    border: "rgba(251, 113, 133, 0.35)",
+    rail: "from-rose-400/70 to-rose-500/15",
+    detail: "Archive lane for declined targets.",
   },
 ];
 
@@ -191,11 +212,32 @@ const PIXEL_PALETTES: Record<string, string> = {
   ".": "transparent",
 };
 
-const STATUS_LABELS: Record<LeadStatus, string> = {
+const STATUS_TO_STAGE: Record<LeadStatus, StageId> = {
+  NO_RESPONSE: "LEAD",
+  CONNECTED: "CONNECT",
+  RESPONDED: "MESSAGE",
+  MEETING_BOOKED: "CLOSE",
+  REJECTED: "REJECTED",
+  LEAD: "LEAD",
+  CONNECT: "CONNECT",
+  MESSAGE: "MESSAGE",
+  CLOSE: "CLOSE",
+};
+
+const STAGE_TO_STATUS: Record<StageId, LeadStatus> = {
+  LEAD: "NO_RESPONSE",
+  CONNECT: "CONNECTED",
+  MESSAGE: "RESPONDED",
+  CLOSE: "MEETING_BOOKED",
+  REJECTED: "REJECTED",
+};
+
+const STATUS_LABELS: Record<StageId, string> = {
   LEAD: "SCAN",
   CONNECT: "LINK",
   MESSAGE: "PING",
   CLOSE: "LOCK",
+  REJECTED: "DROP",
 };
 
 const AVATARS: PixelMap[] = ["avatarA", "avatarB", "avatarC", "avatarD"];
@@ -226,10 +268,16 @@ export default function PipelinePage() {
     };
   }, []);
 
-  const selectedLead = leads.find((lead) => lead.id === selectedLeadId) ?? null;
+  const getStageId = (status: LeadStatus): StageId => STATUS_TO_STAGE[status] ?? "LEAD";
 
-  const moveLead = async (lead: Lead, nextStatus: LeadStatus) => {
-    if (lead.status === nextStatus || updatingLeadId) return;
+  const selectedLead = leads.find((lead) => lead.id === selectedLeadId) ?? null;
+  const selectedLeadStage = selectedLead ? getStageId(selectedLead.status) : null;
+
+  const moveLead = async (lead: Lead, nextStage: StageId) => {
+    const currentStage = getStageId(lead.status);
+    const nextStatus = STAGE_TO_STATUS[nextStage];
+
+    if (currentStage === nextStage || updatingLeadId) return;
 
     const previousStatus = lead.status;
     setUpdatingLeadId(lead.id);
@@ -302,7 +350,7 @@ export default function PipelinePage() {
             <HudChip label="Targets" value={String(leads.length)} tone="cyan" />
             <HudChip
               label="Closed"
-              value={String(leads.filter((lead) => lead.status === "CLOSE").length)}
+              value={String(leads.filter((lead) => getStageId(lead.status) === "CLOSE").length)}
               tone="green"
             />
             <Link
@@ -317,10 +365,10 @@ export default function PipelinePage() {
 
         <div className="grid gap-5 xl:grid-cols-[minmax(0,1.8fr)_360px]">
           <section className="space-y-4">
-            <div className="grid gap-4 lg:grid-cols-4">
+            <div className="grid gap-4 lg:grid-cols-5">
               {STAGES.map((stage, index) => {
-                const stageLeads = leads.filter((lead) => lead.status === stage.id);
-                const isActive = selectedLead?.status === stage.id;
+                const stageLeads = leads.filter((lead) => getStageId(lead.status) === stage.id);
+                const isActive = selectedLeadStage === stage.id;
 
                 return (
                   <motion.section
@@ -479,7 +527,7 @@ export default function PipelinePage() {
                     </div>
 
                     <div className="grid gap-2 text-sm text-slate-300">
-                      <DetailRow label="Status" value={selectedLead.status} />
+                      <DetailRow label="Status" value={getStageId(selectedLead.status)} />
                       <DetailRow label="Email" value={selectedLead.email ?? "No email"} />
                       <DetailRow label="Phone" value={selectedLead.phone ?? "No phone"} />
                       <DetailRow label="Source" value={selectedLead.source ?? "Unknown source"} />
@@ -495,7 +543,7 @@ export default function PipelinePage() {
                     </p>
                     <div className="grid grid-cols-2 gap-2">
                       {STAGES.map((stage) => {
-                        const active = selectedLead.status === stage.id;
+                        const active = getStageId(selectedLead.status) === stage.id;
 
                         return (
                           <button
@@ -608,7 +656,7 @@ function LeadTile({
         {lead.contact ?? "Unknown Contact"}
       </p>
       <div className="mt-2 flex items-center justify-between text-[10px] uppercase tracking-[0.2em] text-slate-500">
-        <span>{STATUS_LABELS[lead.status]}</span>
+        <span>{STATUS_LABELS[STATUS_TO_STAGE[lead.status] ?? "LEAD"]}</span>
         <span>{busy ? "Moving" : "Ready"}</span>
       </div>
     </motion.button>
