@@ -68,12 +68,14 @@ model Todo {
   priority    TodoPriority @default(MEDIUM)
   status      TodoStatus   @default(PENDING)
   agent       String
+  dueDate     DateTime?
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   activities  TodoActivity[]
   notifications TodoNotification[]
 
   @@index([agent])
+  @@index([dueDate])
   @@index([status])
   @@index([createdAt])
 }

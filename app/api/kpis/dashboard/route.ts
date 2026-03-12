@@ -1,5 +1,6 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { getTodoDateWhereClause, parseTodoDateFilter } from "@/lib/todo-dates";
 
 type CustomKpiValue = string | number | boolean | null | Record<string, unknown> | Array<unknown>;
 
@@ -18,8 +19,10 @@ function normalizeKpiValue(value: unknown): CustomKpiValue {
   return String(value);
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url);
+    const dateFilter = parseTodoDateFilter(searchParams.get("date"));
     const now = new Date();
     const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     const averageDealValue = 2000;
@@ -40,7 +43,10 @@ export async function GET() {
       prisma.lead.count({ where: { messageSent: true } }),
       prisma.lead.count({ where: { status: { in: closedStatuses } } }),
       prisma.lead.count({ where: { status: { notIn: inactiveStatuses } } }),
-      prisma.todo.findMany({ orderBy: [{ status: "asc" }, { priority: "desc" }, { createdAt: "desc" }] }),
+      prisma.todo.findMany({
+        where: getTodoDateWhereClause(dateFilter),
+        orderBy: [{ status: "asc" }, { dueDate: "asc" }, { priority: "desc" }, { createdAt: "desc" }],
+      }),
       prisma.customKpi.findMany({ orderBy: [{ timestamp: "desc" }, { createdAt: "desc" }] }),
     ]);
 
@@ -83,6 +89,7 @@ export async function GET() {
         pending: todos.filter((todo) => todo.status === "PENDING").length,
         done: todos.filter((todo) => todo.status === "DONE").length,
       },
+      todoDateFilter: dateFilter,
       customKpisByAgent,
     });
   } catch (error) {
