@@ -44,14 +44,17 @@ interface Lead {
   activities: Activity[];
 }
 
-const STATUSES = ["LEAD", "CONNECT", "MESSAGE", "CLOSE"];
+const STATUSES = ["LEAD", "CONNECT", "MESSAGE", "SCHEDULE_CALL", "CLOSED", "REJECTED"];
 const PRIORITIES = ["HIGH", "MEDIUM", "LOW"];
 
 const statusColors: Record<string, string> = {
   LEAD: "text-slate-300 border-slate-500",
   CONNECT: "text-blue-300 border-blue-500",
   MESSAGE: "text-purple-300 border-purple-500",
+  SCHEDULE_CALL: "text-amber-300 border-amber-500",
+  CLOSED: "text-green-300 border-green-500",
   CLOSE: "text-green-300 border-green-500",
+  REJECTED: "text-rose-300 border-rose-500",
 };
 
 const priorityColors: Record<string, string> = {

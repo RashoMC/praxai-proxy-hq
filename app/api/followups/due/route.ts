@@ -12,7 +12,7 @@ export async function GET() {
           lte: in24h,
         },
         status: {
-          not: "CLOSE",
+          notIn: ["CLOSED", "CLOSE", "REJECTED"],
         },
       },
       orderBy: { followUpAt: "asc" },

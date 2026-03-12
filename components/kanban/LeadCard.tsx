@@ -2,101 +2,132 @@
 
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import Link from "next/link";
-import { Mail, Clock, GripVertical } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import type { Lead } from "./KanbanBoard";
+import Link from "next/link";
+import {
+  Clock,
+  ExternalLink,
+  GripVertical,
+  Linkedin,
+  Mail,
+} from "lucide-react";
+import type { ColumnId, Lead } from "./KanbanBoard";
 
 const priorityConfig = {
-  HIGH: { badge: "bg-red-500/10 text-red-400 border-red-500/30", label: "HIGH" },
-  MEDIUM: { badge: "bg-amber-500/10 text-amber-400 border-amber-500/30", label: "MED" },
-  LOW: { badge: "bg-slate-500/10 text-slate-400 border-slate-500/30", label: "LOW" },
+  HIGH: "border-rose-400/30 bg-rose-500/10 text-rose-200",
+  MEDIUM: "border-amber-400/30 bg-amber-500/10 text-amber-200",
+  LOW: "border-slate-600 bg-slate-800 text-slate-300",
 };
 
 interface LeadCardProps {
   lead: Lead;
+  columnId: ColumnId;
   isDragging?: boolean;
 }
 
-export default function LeadCard({ lead, isDragging = false }: LeadCardProps) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging: isSortDragging } =
-    useSortable({ id: lead.id });
+export default function LeadCard({
+  lead,
+  columnId,
+  isDragging = false,
+}: LeadCardProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging: isSortDragging,
+  } = useSortable({ id: lead.id });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isSortDragging ? 0.4 : 1,
+    opacity: isSortDragging ? 0.45 : 1,
   };
 
-  const priority = priorityConfig[lead.priority as keyof typeof priorityConfig] ?? priorityConfig.MEDIUM;
-
-  const isOverdue =
-    lead.followUpAt && new Date(lead.followUpAt) < new Date();
+  const priority =
+    priorityConfig[lead.priority as keyof typeof priorityConfig] ?? priorityConfig.MEDIUM;
+  const isOverdue = lead.followUpAt && new Date(lead.followUpAt) < new Date();
+  const isLeadColumn = columnId === "LEAD";
 
   return (
-    <div
+    <article
       ref={setNodeRef}
       style={style}
-      className={`bg-slate-700/60 border rounded-sm p-2.5 group transition-all ${
+      className={`rounded-2xl border bg-slate-950/90 p-4 transition ${
         isDragging
-          ? "border-cyan-500/60 shadow-lg shadow-cyan-500/10"
-          : "border-slate-600 hover:border-slate-500"
+          ? "border-sky-400/40 shadow-[0_16px_36px_rgba(14,165,233,0.12)]"
+          : "border-slate-800 hover:border-slate-700"
       }`}
     >
-      <div className="flex items-start gap-2">
-        {/* Drag handle */}
+      <div className="flex items-start gap-3">
         <button
           {...attributes}
           {...listeners}
-          className="mt-0.5 text-slate-600 hover:text-slate-400 cursor-grab active:cursor-grabbing flex-shrink-0"
+          className="mt-0.5 shrink-0 rounded-md p-1 text-slate-600 transition hover:bg-slate-800 hover:text-slate-300 active:cursor-grabbing"
           tabIndex={-1}
+          aria-label={`Drag ${lead.company}`}
         >
-          <GripVertical size={12} />
+          <GripVertical size={14} />
         </button>
 
-        <div className="flex-1 min-w-0">
-          {/* Company + priority */}
-          <div className="flex items-center justify-between gap-1 mb-1">
-            <Link
-              href={`/leads/${lead.id}`}
-              className="text-sm font-semibold text-slate-200 hover:text-cyan-400 transition-colors truncate"
-            >
-              {lead.company}
-            </Link>
-            <span className={`text-[10px] px-1.5 py-0.5 rounded-sm border flex-shrink-0 font-mono ${priority.badge}`}>
-              {priority.label}
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <Link
+                href={`/leads/${lead.id}`}
+                className="block truncate text-sm font-semibold text-white transition hover:text-sky-300"
+              >
+                {lead.company}
+              </Link>
+              <p className="mt-1 truncate text-sm text-slate-400">
+                {lead.contact ?? "No contact name"}
+              </p>
+            </div>
+            <span className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${priority}`}>
+              {lead.priority}
             </span>
           </div>
 
-          {/* Contact */}
-          {lead.contact && (
-            <p className="text-xs text-slate-400 truncate mb-1.5">{lead.contact}</p>
-          )}
+          <div className="mt-4 space-y-2">
+            {isLeadColumn && lead.linkedin ? (
+              <a
+                href={lead.linkedin}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-sky-300 transition hover:border-slate-700 hover:text-sky-200"
+              >
+                <Linkedin size={14} className="shrink-0" />
+                <span className="truncate">{lead.linkedin}</span>
+                <ExternalLink size={13} className="shrink-0" />
+              </a>
+            ) : null}
 
-          {/* Links + indicators */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              {lead.email && (
-                <Mail size={11} className="text-slate-500 hover:text-cyan-400 transition-colors" />
-              )}
-              {lead.messageSent && (
-                <span className="text-[10px] text-green-400 font-mono">✓ sent</span>
-              )}
-            </div>
+            {!isLeadColumn && lead.email ? (
+              <div className="flex items-center gap-2 text-sm text-slate-400">
+                <Mail size={14} className="shrink-0 text-slate-500" />
+                <span className="truncate">{lead.email}</span>
+              </div>
+            ) : null}
+          </div>
 
-            {lead.followUpAt && (
+          <div className="mt-4 flex items-center justify-between gap-3 text-xs">
+            <span className="text-slate-500">
+              {lead.messageSent ? "Message sent" : "No message sent"}
+            </span>
+            {lead.followUpAt ? (
               <span
-                className={`flex items-center gap-1 text-[10px] font-mono ${
-                  isOverdue ? "text-red-400" : "text-slate-500"
+                className={`inline-flex items-center gap-1 ${
+                  isOverdue ? "text-rose-300" : "text-slate-500"
                 }`}
               >
-                <Clock size={10} />
+                <Clock size={12} />
                 {formatDistanceToNow(new Date(lead.followUpAt), { addSuffix: true })}
               </span>
-            )}
+            ) : null}
           </div>
         </div>
       </div>
-    </div>
+    </article>
   );
 }

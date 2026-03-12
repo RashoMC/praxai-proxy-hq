@@ -4,12 +4,17 @@ import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowRight,
+  CheckCircle2,
   ChevronRight,
+  ExternalLink,
+  Linkedin,
+  Mail,
+  Phone,
   Plus,
   UserRound,
-  X,
+  XCircle,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 export const dynamic = "force-dynamic";
 
@@ -22,9 +27,17 @@ type LeadStatus =
   | "LEAD"
   | "CONNECT"
   | "MESSAGE"
+  | "SCHEDULE_CALL"
+  | "CLOSED"
   | "CLOSE";
 
-type StageId = "LEAD" | "CONNECT" | "MESSAGE" | "CLOSE" | "REJECTED";
+type StageId =
+  | "LEAD"
+  | "CONNECT"
+  | "MESSAGE"
+  | "SCHEDULE_CALL"
+  | "CLOSED"
+  | "REJECTED";
 
 interface Activity {
   id: string;
@@ -52,195 +65,102 @@ interface Lead {
   activities?: Activity[];
 }
 
-const STAGES: Array<{
-  id: StageId;
+const MAIN_STAGES: Array<{
+  id: Exclude<StageId, "REJECTED">;
   label: string;
-  icon: PixelMap;
+  description: string;
   accent: string;
-  glow: string;
-  border: string;
-  rail: string;
-  detail: string;
+  chip: string;
+  panel: string;
 }> = [
   {
     id: "LEAD",
     label: "Lead",
-    icon: "desk",
-    accent: "#22d3ee",
-    glow: "rgba(34, 211, 238, 0.28)",
-    border: "rgba(34, 211, 238, 0.4)",
-    rail: "from-cyan-400/70 to-cyan-500/15",
-    detail: "Intel desk receiving fresh targets.",
+    description: "New prospects ready for connection requests.",
+    accent: "text-sky-300",
+    chip: "bg-sky-500/12 text-sky-200 border-sky-400/25",
+    panel: "border-sky-400/20 bg-slate-950/80",
   },
   {
     id: "CONNECT",
     label: "Connect",
-    icon: "computer",
-    accent: "#8b5cf6",
-    glow: "rgba(139, 92, 246, 0.28)",
-    border: "rgba(139, 92, 246, 0.4)",
-    rail: "from-violet-400/70 to-violet-500/15",
-    detail: "Terminal station opening the line.",
+    description: "Connection request sent and awaiting response.",
+    accent: "text-indigo-300",
+    chip: "bg-indigo-500/12 text-indigo-200 border-indigo-400/25",
+    panel: "border-indigo-400/20 bg-slate-950/80",
   },
   {
     id: "MESSAGE",
     label: "Message",
-    icon: "phone",
-    accent: "#22c55e",
-    glow: "rgba(34, 197, 94, 0.28)",
-    border: "rgba(34, 197, 94, 0.4)",
-    rail: "from-emerald-400/70 to-emerald-500/15",
-    detail: "Comms deck pushing message drafts.",
+    description: "Accepted and actively being messaged.",
+    accent: "text-violet-300",
+    chip: "bg-violet-500/12 text-violet-200 border-violet-400/25",
+    panel: "border-violet-400/20 bg-slate-950/80",
   },
   {
-    id: "CLOSE",
-    label: "Close",
-    icon: "handshake",
-    accent: "#e879f9",
-    glow: "rgba(232, 121, 249, 0.28)",
-    border: "rgba(232, 121, 249, 0.4)",
-    rail: "from-fuchsia-400/70 to-fuchsia-500/15",
-    detail: "Treaty table locking in wins.",
+    id: "SCHEDULE_CALL",
+    label: "Schedule Call",
+    description: "Coordinating availability and booking a meeting.",
+    accent: "text-amber-300",
+    chip: "bg-amber-500/12 text-amber-200 border-amber-400/25",
+    panel: "border-amber-400/20 bg-slate-950/80",
   },
   {
-    id: "REJECTED",
-    label: "Rejected",
-    icon: "avatarD",
-    accent: "#fb7185",
-    glow: "rgba(251, 113, 133, 0.24)",
-    border: "rgba(251, 113, 133, 0.35)",
-    rail: "from-rose-400/70 to-rose-500/15",
-    detail: "Archive lane for declined targets.",
+    id: "CLOSED",
+    label: "Closed",
+    description: "Won opportunities and completed deals.",
+    accent: "text-emerald-300",
+    chip: "bg-emerald-500/12 text-emerald-200 border-emerald-400/25",
+    panel: "border-emerald-400/20 bg-slate-950/80",
   },
 ];
 
-type PixelMap = "desk" | "computer" | "phone" | "handshake" | "avatarA" | "avatarB" | "avatarC" | "avatarD";
-
-const PIXELS: Record<PixelMap, string[]> = {
-  desk: [
-    "..aaaaaa..",
-    ".abbbbbba.",
-    "abccccccba",
-    "abccccccba",
-    ".abbbbbba.",
-    "...d..d...",
-    "...d..d...",
-    "..dd..dd..",
-  ],
-  computer: [
-    "..aaaaaa..",
-    ".abbbbbba.",
-    "abccccccba",
-    "abccccccba",
-    ".abbbbbba.",
-    "...adda...",
-    "..eeeeee..",
-    "..e....e..",
-  ],
-  phone: [
-    "...aaaa...",
-    "..abbbba..",
-    ".abccccba.",
-    ".abccccba.",
-    ".abccccba.",
-    ".abddddba.",
-    "..abbbba..",
-    "...aaaa...",
-  ],
-  handshake: [
-    "..aa..bb..",
-    ".acccbbbd.",
-    "acccceebbd",
-    "afffeeeegd",
-    ".affhhggd.",
-    "..ahhhgd..",
-    "...aiigd..",
-    "....ii....",
-  ],
-  avatarA: [
-    "..aaaa..",
-    ".abbbba.",
-    ".acccca.",
-    ".acddca.",
-    ".acccca.",
-    "..aeea..",
-    "..effe..",
-    ".ff..ff.",
-  ],
-  avatarB: [
-    "..aaaa..",
-    ".abbbba.",
-    ".acccca.",
-    ".acdcca.",
-    ".acccca.",
-    "..aeea..",
-    ".effffe.",
-    ".ff..ff.",
-  ],
-  avatarC: [
-    "..aaaa..",
-    ".abbbba.",
-    ".acccca.",
-    ".adcdda.",
-    ".acccca.",
-    "..aeea..",
-    "..effe..",
-    ".f....f.",
-  ],
-  avatarD: [
-    "..aaaa..",
-    ".abbbba.",
-    ".acccca.",
-    ".acddca.",
-    ".acccca.",
-    ".eeaeea.",
-    "..effe..",
-    ".ff..ff.",
-  ],
-};
-
-const PIXEL_PALETTES: Record<string, string> = {
-  a: "#0f172a",
-  b: "#334155",
-  c: "#22d3ee",
-  d: "#a855f7",
-  e: "#22c55e",
-  f: "#e2e8f0",
-  g: "#f472b6",
-  h: "#cbd5e1",
-  i: "#86efac",
-  ".": "transparent",
+const REJECTED_STAGE = {
+  id: "REJECTED" as const,
+  label: "Rejected",
+  description: "Archived out of the main flow.",
+  accent: "text-rose-300",
+  chip: "bg-rose-500/12 text-rose-200 border-rose-400/25",
+  panel: "border-rose-400/20 bg-slate-950/80",
 };
 
 const STATUS_TO_STAGE: Record<LeadStatus, StageId> = {
   NO_RESPONSE: "LEAD",
   CONNECTED: "CONNECT",
   RESPONDED: "MESSAGE",
-  MEETING_BOOKED: "CLOSE",
+  MEETING_BOOKED: "SCHEDULE_CALL",
   REJECTED: "REJECTED",
   LEAD: "LEAD",
   CONNECT: "CONNECT",
   MESSAGE: "MESSAGE",
-  CLOSE: "CLOSE",
+  SCHEDULE_CALL: "SCHEDULE_CALL",
+  CLOSED: "CLOSED",
+  CLOSE: "CLOSED",
 };
 
 const STAGE_TO_STATUS: Record<StageId, LeadStatus> = {
-  LEAD: "NO_RESPONSE",
-  CONNECT: "CONNECTED",
-  MESSAGE: "RESPONDED",
-  CLOSE: "MEETING_BOOKED",
+  LEAD: "LEAD",
+  CONNECT: "CONNECT",
+  MESSAGE: "MESSAGE",
+  SCHEDULE_CALL: "SCHEDULE_CALL",
+  CLOSED: "CLOSED",
   REJECTED: "REJECTED",
 };
 
-const STATUS_LABELS: Record<StageId, string> = {
-  LEAD: "SCAN",
-  CONNECT: "LINK",
-  MESSAGE: "PING",
-  CLOSE: "LOCK",
-  REJECTED: "DROP",
-};
+const STAGE_ORDER: StageId[] = [
+  "LEAD",
+  "CONNECT",
+  "MESSAGE",
+  "SCHEDULE_CALL",
+  "CLOSED",
+  "REJECTED",
+];
 
-const AVATARS: PixelMap[] = ["avatarA", "avatarB", "avatarC", "avatarD"];
+const PRIORITY_TONE: Record<string, string> = {
+  HIGH: "border-rose-400/30 bg-rose-500/10 text-rose-200",
+  MEDIUM: "border-amber-400/30 bg-amber-500/10 text-amber-200",
+  LOW: "border-slate-500/30 bg-slate-800 text-slate-300",
+};
 
 export default function PipelinePage() {
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -251,7 +171,7 @@ export default function PipelinePage() {
   useEffect(() => {
     let cancelled = false;
 
-    fetch("/api/leads")
+    fetch("/api/leads", { cache: "no-store" })
       .then((res) => res.json())
       .then((data) => {
         if (!cancelled && Array.isArray(data)) {
@@ -260,7 +180,9 @@ export default function PipelinePage() {
         }
       })
       .finally(() => {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       });
 
     return () => {
@@ -270,20 +192,26 @@ export default function PipelinePage() {
 
   const getStageId = (status: LeadStatus): StageId => STATUS_TO_STAGE[status] ?? "LEAD";
 
+  const getStageLeads = (stageId: StageId) =>
+    leads.filter((lead) => getStageId(lead.status) === stageId);
+
   const selectedLead = leads.find((lead) => lead.id === selectedLeadId) ?? null;
-  const selectedLeadStage = selectedLead ? getStageId(selectedLead.status) : null;
 
   const moveLead = async (lead: Lead, nextStage: StageId) => {
     const currentStage = getStageId(lead.status);
     const nextStatus = STAGE_TO_STATUS[nextStage];
 
-    if (currentStage === nextStage || updatingLeadId) return;
+    if (currentStage === nextStage || updatingLeadId) {
+      return;
+    }
 
     const previousStatus = lead.status;
     setUpdatingLeadId(lead.id);
     setLeads((current) =>
       current.map((item) =>
-        item.id === lead.id ? { ...item, status: nextStatus, updatedAt: new Date().toISOString() } : item
+        item.id === lead.id
+          ? { ...item, status: nextStatus, updatedAt: new Date().toISOString() }
+          : item
       )
     );
 
@@ -299,441 +227,471 @@ export default function PipelinePage() {
       }
     } catch {
       setLeads((current) =>
-        current.map((item) => (item.id === lead.id ? { ...item, status: previousStatus } : item))
+        current.map((item) =>
+          item.id === lead.id ? { ...item, status: previousStatus } : item
+        )
       );
     } finally {
       setUpdatingLeadId(null);
     }
   };
 
-  return (
-    <div className="relative overflow-hidden rounded-sm border border-cyan-500/20 bg-[#050816] p-4 text-slate-100 shadow-[0_0_0_1px_rgba(6,182,212,0.08),0_0_60px_rgba(34,211,238,0.08)] sm:p-6">
-      <div
-        className="pointer-events-none absolute inset-0 opacity-70"
-        style={{
-          backgroundImage:
-            "linear-gradient(rgba(148,163,184,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,0.08) 1px, transparent 1px), linear-gradient(180deg, rgba(8,47,73,0.4), transparent 28%, rgba(17,24,39,0.15))",
-          backgroundSize: "28px 28px, 28px 28px, 100% 100%",
-        }}
-      />
-      <div
-        className="pointer-events-none absolute inset-0 opacity-20"
-        style={{
-          background:
-            "repeating-linear-gradient(180deg, transparent 0px, transparent 3px, rgba(14,165,233,0.12) 4px)",
-        }}
-      />
+  const totalLeads = leads.length;
+  const closedLeads = getStageLeads("CLOSED").length;
+  const activeLeads = totalLeads - closedLeads - getStageLeads("REJECTED").length;
 
-      <div className="relative z-10 space-y-6">
-        <header className="flex flex-col gap-4 border border-cyan-500/20 bg-slate-950/70 p-4 backdrop-blur sm:flex-row sm:items-center sm:justify-between">
-          <div className="space-y-2">
-            <p
-              className="text-xs uppercase tracking-[0.35em] text-cyan-300/80"
-              style={{ fontFamily: "var(--font-pixelify)" }}
-            >
-              PX-90 COMMAND GRID
-            </p>
-            <div>
-              <h1
-                className="text-2xl font-bold uppercase text-cyan-300 sm:text-3xl"
-                style={{ fontFamily: "var(--font-pixelify)" }}
-              >
-                Lead Pipeline
+  return (
+    <div className="space-y-6">
+      <section className="rounded-2xl border border-slate-800 bg-[radial-gradient(circle_at_top_left,rgba(56,189,248,0.08),transparent_35%),linear-gradient(180deg,#0f172a_0%,#020617_100%)] p-6 shadow-[0_18px_60px_rgba(2,6,23,0.45)]">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-3xl space-y-3">
+            <span className="inline-flex rounded-full border border-sky-400/20 bg-sky-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-sky-200">
+              Pipeline
+            </span>
+            <div className="space-y-2">
+              <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+                Clean prospect flow from LinkedIn outreach to closed deal
               </h1>
-              <p className="max-w-2xl text-sm text-slate-400">
-                Route pixel agents from acquisition to close. Select a target on the map to inspect or advance it.
+              <p className="text-sm leading-6 text-slate-400 sm:text-base">
+                Lead starts as a scan-friendly list for connection requests, then moves through connect, message, scheduling, and close. Rejected leads stay visible, but out of the main flow.
               </p>
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
-            <HudChip label="Targets" value={String(leads.length)} tone="cyan" />
-            <HudChip
-              label="Closed"
-              value={String(leads.filter((lead) => getStageId(lead.status) === "CLOSE").length)}
-              tone="green"
-            />
+          <div className="flex flex-wrap gap-3">
+            <MetricChip label="Total Leads" value={String(totalLeads)} />
+            <MetricChip label="Active Pipeline" value={String(activeLeads)} />
+            <MetricChip label="Closed" value={String(closedLeads)} accent="text-emerald-300" />
             <Link
               href="/leads/new"
-              className="inline-flex items-center gap-2 border border-cyan-400/40 bg-cyan-400/10 px-3 py-2 text-sm text-cyan-200 transition-colors hover:bg-cyan-400/20"
+              className="inline-flex items-center gap-2 rounded-xl border border-sky-400/25 bg-sky-500/10 px-4 py-3 text-sm font-medium text-sky-100 transition hover:bg-sky-500/20"
             >
-              <Plus size={14} />
-              Add Lead
+              <Plus size={16} />
+              Add lead
             </Link>
           </div>
-        </header>
+        </div>
+      </section>
 
-        <div className="grid gap-5 xl:grid-cols-[minmax(0,1.8fr)_360px]">
-          <section className="space-y-4">
-            <div className="grid gap-4 lg:grid-cols-5">
-              {STAGES.map((stage, index) => {
-                const stageLeads = leads.filter((lead) => getStageId(lead.status) === stage.id);
-                const isActive = selectedLeadStage === stage.id;
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="space-y-6">
+          <div className="grid gap-4 xl:grid-cols-5">
+            {MAIN_STAGES.map((stage, index) => {
+              const stageLeads = getStageLeads(stage.id);
 
-                return (
-                  <motion.section
-                    key={stage.id}
-                    layout
-                    initial={{ opacity: 0, y: 24 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.35, delay: index * 0.06 }}
-                    className="relative"
-                  >
-                    <div
-                      className="absolute inset-2 blur-2xl"
-                      style={{ backgroundColor: stage.glow }}
-                    />
-                    <div
-                      className="relative h-full border bg-slate-950/85 p-3"
-                      style={{
-                        borderColor: isActive ? stage.accent : stage.border,
-                        boxShadow: isActive ? `0 0 0 1px ${stage.accent} inset` : undefined,
-                      }}
-                    >
-                      <div className="mb-3 flex items-start justify-between gap-3">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <PixelSprite map={stage.icon} pixelSize={8} />
-                            <div>
-                              <p
-                                className="text-lg uppercase"
-                                style={{
-                                  color: stage.accent,
-                                  fontFamily: "var(--font-pixelify)",
-                                }}
-                              >
-                                {stage.id}
-                              </p>
-                              <p className="text-[11px] uppercase tracking-[0.2em] text-slate-500">
-                                {stage.detail}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="border border-white/10 bg-slate-900/90 px-2 py-1 text-right">
-                          <div className="text-[10px] uppercase tracking-[0.25em] text-slate-500">Count</div>
-                          <div
-                            className="text-xl"
-                            style={{
-                              color: stage.accent,
-                              fontFamily: "var(--font-pixelify)",
-                            }}
-                          >
-                            {stageLeads.length}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className={`mb-3 h-2 w-full bg-gradient-to-r ${stage.rail}`} />
-
-                      <div className="grid min-h-[320px] grid-cols-2 gap-2 rounded-sm border border-white/8 bg-slate-900/65 p-2">
-                        {loading
-                          ? Array.from({ length: 4 }).map((_, cellIndex) => (
-                              <div
-                                key={`${stage.id}-loading-${cellIndex}`}
-                                className="h-20 animate-pulse border border-white/5 bg-slate-800/90"
-                              />
-                            ))
-                          : (
-                              <AnimatePresence>
-                                {stageLeads.map((lead, leadIndex) => (
-                                  <LeadTile
-                                    key={lead.id}
-                                    lead={lead}
-                                    index={leadIndex}
-                                    selected={selectedLeadId === lead.id}
-                                    busy={updatingLeadId === lead.id}
-                                    accent={stage.accent}
-                                    onSelect={() => setSelectedLeadId(lead.id)}
-                                  />
-                                ))}
-                              </AnimatePresence>
-                            )}
-                      </div>
-
-                      <div className="mt-3 flex items-center justify-between text-[11px] uppercase tracking-[0.2em] text-slate-500">
-                        <span>Sector {index + 1}</span>
-                        <span>{STATUS_LABELS[stage.id]}</span>
-                      </div>
-                    </div>
-
-                    {index < STAGES.length - 1 ? (
-                      <div className="pointer-events-none absolute -right-3 top-1/2 hidden -translate-y-1/2 lg:block">
-                        <ArrowRight className="h-5 w-5 text-cyan-300/45" />
-                      </div>
-                    ) : null}
-                  </motion.section>
-                );
-              })}
-            </div>
-          </section>
-
-          <aside className="relative border border-fuchsia-400/20 bg-slate-950/85 p-4 backdrop-blur">
-            <div className="absolute inset-3 bg-[radial-gradient(circle_at_top,rgba(168,85,247,0.18),transparent_48%)]" />
-            <div className="relative space-y-4">
-              <div className="flex items-center justify-between border-b border-white/10 pb-3">
-                <div>
-                  <p
-                    className="text-lg uppercase text-fuchsia-300"
-                    style={{ fontFamily: "var(--font-pixelify)" }}
-                  >
-                    Lead Detail
-                  </p>
-                  <p className="text-xs uppercase tracking-[0.25em] text-slate-500">
-                    Click any avatar on the map
-                  </p>
-                </div>
-                {selectedLead ? (
-                  <button
-                    type="button"
-                    onClick={() => setSelectedLeadId(null)}
-                    className="border border-white/10 p-2 text-slate-400 transition-colors hover:text-white"
-                    aria-label="Close detail panel"
-                  >
-                    <X size={14} />
-                  </button>
-                ) : null}
-              </div>
-
-              {selectedLead ? (
-                <motion.div
-                  key={selectedLead.id}
-                  initial={{ opacity: 0, x: 18 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -18 }}
-                  className="space-y-4"
+              return (
+                <section
+                  key={stage.id}
+                  className={`rounded-2xl border p-4 shadow-[0_10px_30px_rgba(2,6,23,0.28)] ${stage.panel}`}
                 >
-                  <div className="border border-cyan-400/20 bg-slate-900/80 p-3">
-                    <div className="mb-3 flex items-start justify-between gap-3">
-                      <div className="flex items-start gap-3">
-                        <div className="border border-white/10 bg-slate-950/90 p-2">
-                          <PixelSprite map={avatarForLead(selectedLead.id)} pixelSize={7} />
-                        </div>
-                        <div>
-                          <p className="text-lg font-semibold text-slate-100">{selectedLead.company}</p>
-                          <p className="text-sm text-slate-400">
-                            {selectedLead.contact ?? "Unknown contact"}
-                          </p>
-                        </div>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <h2 className={`text-base font-semibold ${stage.accent}`}>
+                          {stage.label}
+                        </h2>
+                        <span className={`rounded-full border px-2 py-0.5 text-xs font-medium ${stage.chip}`}>
+                          {stageLeads.length}
+                        </span>
                       </div>
-                      <div className="text-right">
-                        <div className="text-[10px] uppercase tracking-[0.25em] text-slate-500">
-                          Priority
-                        </div>
-                        <div className="mt-1 inline-flex border border-emerald-400/20 bg-emerald-400/10 px-2 py-1 text-xs text-emerald-300">
-                          {selectedLead.priority}
-                        </div>
-                      </div>
+                      <p className="text-sm leading-5 text-slate-400">{stage.description}</p>
                     </div>
-
-                    <div className="grid gap-2 text-sm text-slate-300">
-                      <DetailRow label="Status" value={getStageId(selectedLead.status)} />
-                      <DetailRow label="Email" value={selectedLead.email ?? "No email"} />
-                      <DetailRow label="Phone" value={selectedLead.phone ?? "No phone"} />
-                      <DetailRow label="Source" value={selectedLead.source ?? "Unknown source"} />
-                    </div>
+                    {index < MAIN_STAGES.length - 1 ? (
+                      <ArrowRight className="mt-1 hidden h-4 w-4 text-slate-600 xl:block" />
+                    ) : null}
                   </div>
 
-                  <div className="border border-white/10 bg-slate-900/80 p-3">
-                    <p
-                      className="mb-3 text-sm uppercase text-cyan-300"
-                      style={{ fontFamily: "var(--font-pixelify)" }}
-                    >
-                      Route Target
-                    </p>
-                    <div className="grid grid-cols-2 gap-2">
-                      {STAGES.map((stage) => {
-                        const active = getStageId(selectedLead.status) === stage.id;
-
-                        return (
-                          <button
-                            key={stage.id}
-                            type="button"
-                            onClick={() => moveLead(selectedLead, stage.id)}
-                            disabled={active || updatingLeadId === selectedLead.id}
-                            className="border px-3 py-2 text-left text-sm transition disabled:cursor-not-allowed disabled:opacity-50"
-                            style={{
-                              borderColor: active ? stage.accent : stage.border,
-                              backgroundColor: active ? stage.glow : "rgba(15,23,42,0.88)",
-                              color: active ? stage.accent : "#e2e8f0",
-                            }}
-                          >
-                            <div className="flex items-center justify-between">
-                              <span>{stage.id}</span>
-                              <ChevronRight size={14} />
-                            </div>
-                            <div className="mt-1 text-[10px] uppercase tracking-[0.2em] text-slate-500">
-                              {STATUS_LABELS[stage.id]}
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
+                  <div className="mt-4 space-y-3">
+                    {loading ? (
+                      Array.from({ length: 3 }).map((_, skeletonIndex) => (
+                        <div
+                          key={`${stage.id}-${skeletonIndex}`}
+                          className="h-28 animate-pulse rounded-xl border border-slate-800 bg-slate-900/70"
+                        />
+                      ))
+                    ) : stage.id === "LEAD" ? (
+                      stageLeads.length > 0 ? (
+                        stageLeads.map((lead) => (
+                          <LeadListRow
+                            key={lead.id}
+                            lead={lead}
+                            selected={selectedLeadId === lead.id}
+                            busy={updatingLeadId === lead.id}
+                            onSelect={() => setSelectedLeadId(lead.id)}
+                            onMove={() => moveLead(lead, "CONNECT")}
+                          />
+                        ))
+                      ) : (
+                        <EmptyStage message="No fresh leads to action." />
+                      )
+                    ) : stageLeads.length > 0 ? (
+                      <AnimatePresence initial={false}>
+                        {stageLeads.map((lead) => (
+                          <FlowCard
+                            key={lead.id}
+                            lead={lead}
+                            selected={selectedLeadId === lead.id}
+                            busy={updatingLeadId === lead.id}
+                            onSelect={() => setSelectedLeadId(lead.id)}
+                          />
+                        ))}
+                      </AnimatePresence>
+                    ) : (
+                      <EmptyStage message={`No leads in ${stage.label.toLowerCase()}.`} />
+                    )}
                   </div>
+                </section>
+              );
+            })}
+          </div>
 
-                  <div className="border border-white/10 bg-slate-900/80 p-3">
-                    <p
-                      className="mb-2 text-sm uppercase text-emerald-300"
-                      style={{ fontFamily: "var(--font-pixelify)" }}
-                    >
-                      Notes
-                    </p>
-                    <p className="text-sm leading-6 text-slate-400">
-                      {selectedLead.notes ?? "No tactical notes logged for this lead yet."}
-                    </p>
-                  </div>
+          <section className={`rounded-2xl border p-4 shadow-[0_10px_30px_rgba(2,6,23,0.28)] ${REJECTED_STAGE.panel}`}>
+            <div className="flex items-center gap-2">
+              <h2 className={`text-base font-semibold ${REJECTED_STAGE.accent}`}>
+                {REJECTED_STAGE.label}
+              </h2>
+              <span className={`rounded-full border px-2 py-0.5 text-xs font-medium ${REJECTED_STAGE.chip}`}>
+                {getStageLeads("REJECTED").length}
+              </span>
+            </div>
+            <p className="mt-1 text-sm leading-5 text-slate-400">
+              Kept in a separate archive so the active pipeline stays clean.
+            </p>
 
-                  <Link
-                    href={`/leads/${selectedLead.id}`}
-                    className="inline-flex items-center gap-2 border border-fuchsia-400/30 bg-fuchsia-400/10 px-3 py-2 text-sm text-fuchsia-200 transition-colors hover:bg-fuchsia-400/20"
-                  >
-                    <UserRound size={14} />
-                    Open full lead record
-                  </Link>
-                </motion.div>
+            <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {loading ? (
+                Array.from({ length: 3 }).map((_, skeletonIndex) => (
+                  <div
+                    key={`rejected-${skeletonIndex}`}
+                    className="h-28 animate-pulse rounded-xl border border-slate-800 bg-slate-900/70"
+                  />
+                ))
+              ) : getStageLeads("REJECTED").length > 0 ? (
+                getStageLeads("REJECTED").map((lead) => (
+                  <FlowCard
+                    key={lead.id}
+                    lead={lead}
+                    selected={selectedLeadId === lead.id}
+                    busy={updatingLeadId === lead.id}
+                    onSelect={() => setSelectedLeadId(lead.id)}
+                    compact
+                  />
+                ))
               ) : (
-                <div className="border border-dashed border-white/10 bg-slate-900/60 p-6 text-center text-sm text-slate-500">
-                  Select a pixel avatar from any station to inspect details and move it across the command map.
-                </div>
+                <EmptyStage message="No rejected leads." />
               )}
             </div>
-          </aside>
+          </section>
         </div>
+
+        <aside className="rounded-2xl border border-slate-800 bg-slate-950/85 p-5 shadow-[0_14px_40px_rgba(2,6,23,0.35)]">
+          <div className="flex items-center justify-between gap-3 border-b border-slate-800 pb-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+                Lead Detail
+              </p>
+              <h2 className="mt-1 text-xl font-semibold text-white">
+                {selectedLead ? selectedLead.company : "Select a lead"}
+              </h2>
+            </div>
+            {selectedLead ? (
+              <Link
+                href={`/leads/${selectedLead.id}`}
+                className="inline-flex items-center gap-2 rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-300 transition hover:border-slate-600 hover:text-white"
+              >
+                <UserRound size={14} />
+                Open
+              </Link>
+            ) : null}
+          </div>
+
+          {selectedLead ? (
+            <motion.div
+              key={selectedLead.id}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="space-y-5 pt-5"
+            >
+              <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="space-y-1">
+                    <p className="text-lg font-semibold text-white">{selectedLead.company}</p>
+                    <p className="text-sm text-slate-400">
+                      {selectedLead.contact ?? "No contact name"}
+                    </p>
+                  </div>
+                  <span
+                    className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${
+                      PRIORITY_TONE[selectedLead.priority] ?? PRIORITY_TONE.MEDIUM
+                    }`}
+                  >
+                    {selectedLead.priority}
+                  </span>
+                </div>
+
+                <div className="mt-4 space-y-3 text-sm">
+                  <DetailRow label="Stage" value={getStageId(selectedLead.status)} />
+                  <DetailRow label="Source" value={selectedLead.source ?? "Not set"} />
+                  <DetailRow label="Email" value={selectedLead.email ?? "Not set"} />
+                  <DetailRow label="Phone" value={selectedLead.phone ?? "Not set"} />
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
+                <p className="text-sm font-semibold text-white">Quick Actions</p>
+                <div className="mt-3 grid gap-2">
+                  {STAGE_ORDER.filter((stageId) => stageId !== getStageId(selectedLead.status)).map(
+                    (stageId) => (
+                      <button
+                        key={stageId}
+                        type="button"
+                        onClick={() => moveLead(selectedLead, stageId)}
+                        disabled={updatingLeadId === selectedLead.id}
+                        className="flex items-center justify-between rounded-xl border border-slate-700 bg-slate-950/90 px-3 py-3 text-left text-sm text-slate-200 transition hover:border-slate-600 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <span>{stageId.replace("_", " ")}</span>
+                        <ChevronRight size={16} className="text-slate-500" />
+                      </button>
+                    )
+                  )}
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
+                <p className="text-sm font-semibold text-white">Notes</p>
+                <p className="mt-2 text-sm leading-6 text-slate-400">
+                  {selectedLead.notes ?? "No notes yet."}
+                </p>
+              </div>
+            </motion.div>
+          ) : (
+            <div className="pt-5">
+              <div className="rounded-2xl border border-dashed border-slate-800 bg-slate-900/50 p-6 text-sm leading-6 text-slate-500">
+                Select any lead to review contact details, open the full record, or move it to the next pipeline stage.
+              </div>
+            </div>
+          )}
+        </aside>
       </div>
     </div>
   );
 }
 
-function LeadTile({
+function LeadListRow({
   lead,
-  index,
   selected,
   busy,
-  accent,
   onSelect,
+  onMove,
 }: {
   lead: Lead;
-  index: number;
   selected: boolean;
   busy: boolean;
-  accent: string;
   onSelect: () => void;
+  onMove: () => void;
+}) {
+  return (
+    <div
+      className={`w-full rounded-2xl border p-4 text-left transition ${
+        selected
+          ? "border-sky-400/40 bg-sky-500/10 shadow-[0_0_0_1px_rgba(56,189,248,0.15)]"
+          : "border-slate-800 bg-slate-900/80 hover:border-slate-700"
+      }`}
+    >
+      <button type="button" onClick={onSelect} className="block w-full text-left">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 space-y-1">
+            <p className="truncate text-base font-semibold text-white">{lead.company}</p>
+            <p className="truncate text-sm text-slate-400">
+              {lead.contact ?? "No contact name"}
+            </p>
+          </div>
+          <span
+            className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${
+              PRIORITY_TONE[lead.priority] ?? PRIORITY_TONE.MEDIUM
+            }`}
+          >
+            {lead.priority}
+          </span>
+        </div>
+
+        <div className="mt-3 rounded-xl border border-slate-800 bg-slate-950/80 p-3">
+          <div className="flex items-start gap-2 text-sm text-slate-300">
+            <Linkedin size={16} className="mt-0.5 shrink-0 text-sky-300" />
+            <div className="min-w-0">
+              {lead.linkedin ? (
+                <span className="truncate text-sky-200">{lead.linkedin}</span>
+              ) : (
+                <span className="text-slate-500">No LinkedIn URL</span>
+              )}
+            </div>
+          </div>
+        </div>
+      </button>
+
+      <div className="mt-4 flex items-center justify-between gap-3">
+        {lead.linkedin ? (
+          <a
+            href={lead.linkedin}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex min-w-0 items-center gap-2 text-sm font-medium text-sky-300 transition hover:text-sky-200"
+          >
+            <ExternalLink size={14} className="shrink-0" />
+            <span className="truncate">Open LinkedIn</span>
+          </a>
+        ) : (
+          <p className="text-xs uppercase tracking-[0.18em] text-slate-500">
+            Add a LinkedIn URL to action this lead
+          </p>
+        )}
+        <button
+          type="button"
+          onClick={onMove}
+          disabled={busy}
+          className="inline-flex items-center gap-2 rounded-lg border border-sky-400/25 bg-sky-500/10 px-3 py-2 text-sm font-medium text-sky-100 transition hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <ArrowRight size={14} />
+          {busy ? "Moving..." : "Move to Connect"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function FlowCard({
+  lead,
+  selected,
+  busy,
+  onSelect,
+  compact = false,
+}: {
+  lead: Lead;
+  selected: boolean;
+  busy: boolean;
+  onSelect: () => void;
+  compact?: boolean;
 }) {
   return (
     <motion.button
       layout
-      layoutId={`lead-${lead.id}`}
       type="button"
       onClick={onSelect}
-      initial={{ opacity: 0, scale: 0.85, y: 8 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.85 }}
-      transition={{
-        type: "spring",
-        stiffness: 300,
-        damping: 24,
-        delay: index * 0.03,
-      }}
-      className="group relative border border-white/10 bg-slate-950/90 p-2 text-left transition-transform hover:-translate-y-0.5 hover:border-white/25"
-      style={{
-        boxShadow: selected ? `0 0 0 1px ${accent} inset, 0 0 22px rgba(34,211,238,0.08)` : undefined,
-      }}
+      className={`w-full rounded-2xl border p-4 text-left transition ${
+        selected
+          ? "border-slate-600 bg-slate-900 shadow-[0_0_0_1px_rgba(148,163,184,0.12)]"
+          : "border-slate-800 bg-slate-900/80 hover:border-slate-700"
+      }`}
     >
-      <div className="mb-2 flex items-start justify-between gap-2">
-        <PixelSprite map={avatarForLead(lead.id)} pixelSize={5} />
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="truncate text-base font-semibold text-white">{lead.company}</p>
+          <p className="mt-1 truncate text-sm text-slate-400">
+            {lead.contact ?? "No contact name"}
+          </p>
+        </div>
         <span
-          className="border px-1.5 py-0.5 text-[10px] uppercase tracking-[0.2em]"
-          style={{
-            borderColor: busy ? accent : "rgba(148,163,184,0.18)",
-            color: busy ? accent : "#94a3b8",
-          }}
+          className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${
+            PRIORITY_TONE[lead.priority] ?? PRIORITY_TONE.MEDIUM
+          }`}
         >
           {lead.priority}
         </span>
       </div>
-      <p className="truncate text-sm font-medium text-slate-100">{lead.company}</p>
-      <p className="truncate text-xs uppercase tracking-[0.2em] text-slate-500">
-        {lead.contact ?? "Unknown Contact"}
-      </p>
-      <div className="mt-2 flex items-center justify-between text-[10px] uppercase tracking-[0.2em] text-slate-500">
-        <span>{STATUS_LABELS[STATUS_TO_STAGE[lead.status] ?? "LEAD"]}</span>
-        <span>{busy ? "Moving" : "Ready"}</span>
+
+      <div className="mt-4 grid gap-2 text-sm text-slate-400">
+        {lead.email ? (
+          <InlineInfo icon={<Mail size={14} />} value={lead.email} />
+        ) : null}
+        {lead.phone ? (
+          <InlineInfo icon={<Phone size={14} />} value={lead.phone} />
+        ) : null}
+        {!compact && lead.linkedin ? (
+          <InlineInfo icon={<Linkedin size={14} />} value={lead.linkedin} />
+        ) : null}
+      </div>
+
+      <div className="mt-4 flex items-center justify-between text-xs text-slate-500">
+        <span>{busy ? "Updating..." : "Ready"}</span>
+        {getStageIdLabel(lead.status)}
       </div>
     </motion.button>
   );
 }
 
-function HudChip({
+function InlineInfo({
+  icon,
+  value,
+}: {
+  icon: ReactNode;
+  value: string;
+}) {
+  return (
+    <div className="flex items-center gap-2 truncate">
+      <span className="shrink-0 text-slate-500">{icon}</span>
+      <span className="truncate">{value}</span>
+    </div>
+  );
+}
+
+function EmptyStage({ message }: { message: string }) {
+  return (
+    <div className="rounded-2xl border border-dashed border-slate-800 bg-slate-900/40 p-4 text-sm text-slate-500">
+      {message}
+    </div>
+  );
+}
+
+function MetricChip({
   label,
   value,
-  tone,
+  accent = "text-white",
 }: {
   label: string;
   value: string;
-  tone: "cyan" | "green";
+  accent?: string;
 }) {
-  const accent = tone === "green" ? "#22c55e" : "#22d3ee";
-
   return (
-    <div className="border border-white/10 bg-slate-950/90 px-3 py-2">
-      <div className="text-[10px] uppercase tracking-[0.25em] text-slate-500">{label}</div>
-      <div
-        className="text-lg"
-        style={{
-          color: accent,
-          fontFamily: "var(--font-pixelify)",
-        }}
-      >
-        {value}
-      </div>
+    <div className="rounded-xl border border-slate-800 bg-slate-950/85 px-4 py-3">
+      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+        {label}
+      </p>
+      <p className={`mt-1 text-xl font-semibold ${accent}`}>{value}</p>
     </div>
   );
 }
 
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between gap-3 border-b border-white/5 pb-2">
-      <span className="text-[10px] uppercase tracking-[0.25em] text-slate-500">{label}</span>
-      <span className="text-right text-slate-200">{value}</span>
+    <div className="flex items-center justify-between gap-3 border-b border-slate-800 pb-3 last:border-b-0 last:pb-0">
+      <span className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+        {label}
+      </span>
+      <span className="max-w-[65%] text-right text-sm text-slate-200">{value}</span>
     </div>
   );
 }
 
-function PixelSprite({
-  map,
-  pixelSize,
-}: {
-  map: PixelMap;
-  pixelSize: number;
-}) {
-  const rows = PIXELS[map];
+function getStageIdLabel(status: LeadStatus) {
+  const stage = STATUS_TO_STAGE[status] ?? "LEAD";
 
-  return (
-    <div
-      aria-hidden="true"
-      className="grid shrink-0"
-      style={{
-        gridTemplateColumns: `repeat(${rows[0].length}, ${pixelSize}px)`,
-        gridAutoRows: `${pixelSize}px`,
-      }}
-    >
-      {rows.flatMap((row, rowIndex) =>
-        row.split("").map((cell, columnIndex) => (
-          <span
-            key={`${map}-${rowIndex}-${columnIndex}`}
-            style={{
-              width: pixelSize,
-              height: pixelSize,
-              backgroundColor: PIXEL_PALETTES[cell] ?? "transparent",
-            }}
-          />
-        ))
-      )}
-    </div>
-  );
-}
+  if (stage === "CLOSED") {
+    return (
+      <span className="inline-flex items-center gap-1 text-emerald-300">
+        <CheckCircle2 size={14} />
+        Closed
+      </span>
+    );
+  }
 
-function avatarForLead(leadId: string): PixelMap {
-  const total = leadId.split("").reduce((sum, char) => sum + char.charCodeAt(0), 0);
-  return AVATARS[total % AVATARS.length];
+  if (stage === "REJECTED") {
+    return (
+      <span className="inline-flex items-center gap-1 text-rose-300">
+        <XCircle size={14} />
+        Rejected
+      </span>
+    );
+  }
+
+  return <span>{stage.replace("_", " ")}</span>;
 }

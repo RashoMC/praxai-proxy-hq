@@ -240,7 +240,7 @@ export default function Dashboard() {
       value: dashboardKpis ? `${dashboardKpis.overview.conversionRate}%` : "--",
       icon: Activity,
       accent: "#fb7185",
-      note: "Closed deals vs. total leads",
+      note: "Closed deals divided by total leads",
     },
     {
       label: "Pipeline Value",

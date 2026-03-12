@@ -6,7 +6,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 
-const STATUSES = ["LEAD", "CONNECT", "MESSAGE", "CLOSE"];
+const STATUSES = ["LEAD", "CONNECT", "MESSAGE", "SCHEDULE_CALL", "CLOSED", "REJECTED"];
 const PRIORITIES = ["HIGH", "MEDIUM", "LOW"];
 const SOURCES = ["LinkedIn", "Referral", "Cold Email", "Conference", "Inbound", "Other"];
 

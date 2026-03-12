@@ -23,25 +23,28 @@ export async function GET() {
     const now = new Date();
     const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     const averageDealValue = 2000;
+    const closedStatuses = ["CLOSED", "CLOSE"];
+    const inactiveStatuses = [...closedStatuses, "REJECTED"];
 
     const [
       totalLeads,
       leadsThisWeek,
       messagesSent,
       closedLeads,
+      pipelineLeads,
       todos,
       customKpis,
     ] = await Promise.all([
       prisma.lead.count(),
       prisma.lead.count({ where: { createdAt: { gte: weekAgo } } }),
       prisma.lead.count({ where: { messageSent: true } }),
-      prisma.lead.count({ where: { status: "CLOSE" } }),
+      prisma.lead.count({ where: { status: { in: closedStatuses } } }),
+      prisma.lead.count({ where: { status: { notIn: inactiveStatuses } } }),
       prisma.todo.findMany({ orderBy: [{ status: "asc" }, { priority: "desc" }, { createdAt: "desc" }] }),
       prisma.customKpi.findMany({ orderBy: [{ timestamp: "desc" }, { createdAt: "desc" }] }),
     ]);
 
     const conversionRate = totalLeads > 0 ? Math.round((closedLeads / totalLeads) * 100) : 0;
-    const pipelineLeads = totalLeads - closedLeads;
     const pipelineValue = pipelineLeads * averageDealValue;
 
     const customKpisByAgent = Array.from(

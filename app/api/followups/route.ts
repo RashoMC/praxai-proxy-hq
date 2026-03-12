@@ -6,7 +6,7 @@ export async function GET() {
     const leads = await prisma.lead.findMany({
       where: {
         followUpAt: { not: null },
-        status: { not: "CLOSE" },
+        status: { notIn: ["CLOSED", "CLOSE", "REJECTED"] },
       },
       orderBy: { followUpAt: "asc" },
     });
