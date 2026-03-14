@@ -48,55 +48,43 @@ const COLUMNS = [
     id: "LEAD",
     label: "Lead",
     description: "LinkedIn queue",
-    color: "border-sky-500/30",
-    dot: "bg-sky-400",
+    hex: "#38bdf8",
     textColor: "text-sky-200",
-    bg: "bg-sky-500/5",
   },
   {
     id: "CONNECT",
     label: "Connect",
     description: "Request sent",
-    color: "border-indigo-500/30",
-    dot: "bg-indigo-400",
+    hex: "#818cf8",
     textColor: "text-indigo-200",
-    bg: "bg-indigo-500/5",
   },
   {
     id: "MESSAGE",
     label: "Message",
     description: "Accepted and messaging",
-    color: "border-violet-500/30",
-    dot: "bg-violet-400",
+    hex: "#a78bfa",
     textColor: "text-violet-200",
-    bg: "bg-violet-500/5",
   },
   {
     id: "SCHEDULE_CALL",
     label: "Schedule Call",
     description: "Booking a meeting",
-    color: "border-amber-500/30",
-    dot: "bg-amber-400",
+    hex: "#fbbf24",
     textColor: "text-amber-200",
-    bg: "bg-amber-500/5",
   },
   {
     id: "CLOSED",
     label: "Closed",
     description: "Won deal",
-    color: "border-emerald-500/30",
-    dot: "bg-emerald-400",
+    hex: "#34d399",
     textColor: "text-emerald-200",
-    bg: "bg-emerald-500/5",
   },
   {
     id: "REJECTED",
     label: "Rejected",
     description: "Separate archive",
-    color: "border-rose-500/30",
-    dot: "bg-rose-400",
+    hex: "#fb7185",
     textColor: "text-rose-200",
-    bg: "bg-rose-500/5",
   },
 ] as const;
 
@@ -150,7 +138,8 @@ export default function KanbanBoard() {
     fetchLeads();
   }, [fetchLeads]);
 
-  const getColumnId = (status: string): ColumnId => STATUS_TO_COLUMN[status] ?? "LEAD";
+  const getColumnId = (status: string): ColumnId =>
+    STATUS_TO_COLUMN[status] ?? "LEAD";
 
   const getColumnLeads = (columnId: ColumnId) =>
     leads.filter((lead) => getColumnId(lead.status) === columnId);
@@ -182,7 +171,9 @@ export default function KanbanBoard() {
       targetColumnId = overLead ? getColumnId(overLead.status) : undefined;
     }
 
-    const targetStatus = targetColumnId ? COLUMN_TO_STATUS[targetColumnId] : undefined;
+    const targetStatus = targetColumnId
+      ? COLUMN_TO_STATUS[targetColumnId]
+      : undefined;
     if (!targetStatus || lead.status === targetStatus) {
       return;
     }
@@ -209,19 +200,28 @@ export default function KanbanBoard() {
       <div className="space-y-4">
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-5">
           {MAIN_COLUMNS.map((column) => (
-            <div key={column.id} className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4">
-              <div className="mb-4 h-5 w-28 animate-pulse rounded bg-slate-800" />
+            <div
+              key={column.id}
+              className="rounded-sm border-2 border-slate-800 bg-[#0a1422] p-4"
+            >
+              <div className="mb-4 h-5 w-28 animate-pulse rounded-sm bg-slate-800" />
               {[1, 2].map((item) => (
-                <div key={item} className="mb-3 h-28 animate-pulse rounded-xl bg-slate-800" />
+                <div
+                  key={item}
+                  className="mb-3 h-28 animate-pulse rounded-sm bg-slate-800"
+                />
               ))}
             </div>
           ))}
         </div>
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4">
-          <div className="mb-4 h-5 w-28 animate-pulse rounded bg-slate-800" />
+        <div className="rounded-sm border-2 border-slate-800 bg-[#0a1422] p-4">
+          <div className="mb-4 h-5 w-28 animate-pulse rounded-sm bg-slate-800" />
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {[1, 2].map((item) => (
-              <div key={item} className="h-28 animate-pulse rounded-xl bg-slate-800" />
+              <div
+                key={item}
+                className="h-28 animate-pulse rounded-sm bg-slate-800"
+              />
             ))}
           </div>
         </div>
@@ -282,31 +282,43 @@ function KanbanColumn({
 
   return (
     <section
-      className={`rounded-2xl border p-4 transition ${
+      className={`rounded-sm border-2 p-4 transition ${
         isRejected ? "min-h-[220px]" : "min-h-[440px]"
-      } ${column.color} ${
-        isOver ? `${column.bg} shadow-[0_0_0_1px_rgba(148,163,184,0.12)]` : "bg-slate-900/80"
       }`}
+      style={{
+        borderColor: isOver ? `${column.hex}66` : `${column.hex}28`,
+        backgroundColor: isOver ? `${column.hex}0a` : "#0a1422",
+        boxShadow: isOver
+          ? `0 0 0 1px ${column.hex}22, inset 0 0 24px ${column.hex}0a`
+          : "none",
+      }}
     >
       <div className="mb-4 flex items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
-            <span className={`h-2.5 w-2.5 rounded-full ${column.dot}`} />
-            <h3 className={`text-sm font-semibold ${column.textColor}`}>{column.label}</h3>
-            <span className="rounded-full border border-slate-700 px-2 py-0.5 text-xs font-medium text-slate-400">
+            <h3
+              className={`text-sm font-bold ${column.textColor}`}
+              style={{ fontFamily: "var(--font-pixelify)" }}
+            >
+              {column.label}
+            </h3>
+            <span
+              className="rounded-sm border-2 px-1.5 py-0.5 font-mono text-[10px] font-medium text-slate-400"
+              style={{ borderColor: `${column.hex}33` }}
+            >
               {leads.length}
             </span>
           </div>
-          <p className="mt-1 text-xs uppercase tracking-[0.16em] text-slate-500">
+          <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.16em] text-slate-500">
             {column.description}
           </p>
         </div>
 
         <Link
           href="/leads/new"
-          className="rounded-lg border border-slate-700 p-2 text-slate-500 transition hover:border-slate-600 hover:text-sky-300"
+          className="rounded-sm border-2 border-slate-700 p-1.5 text-slate-500 transition hover:border-slate-600 hover:text-sky-300"
         >
-          <Plus size={14} />
+          <Plus size={13} />
         </Link>
       </div>
 
@@ -315,12 +327,16 @@ function KanbanColumn({
           items={leads.map((lead) => lead.id)}
           strategy={verticalListSortingStrategy}
         >
-          <div className={isRejected ? "grid gap-3 md:grid-cols-2 xl:grid-cols-3" : "space-y-3"}>
+          <div
+            className={
+              isRejected ? "grid gap-3 md:grid-cols-2 xl:grid-cols-3" : "space-y-3"
+            }
+          >
             {leads.map((lead) => (
               <LeadCard key={lead.id} lead={lead} columnId={column.id} />
             ))}
             {leads.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-slate-800 bg-slate-950/50 p-4 text-sm text-slate-500">
+              <div className="rounded-sm border-2 border-dashed border-slate-800 bg-slate-950/50 p-4 font-mono text-xs uppercase tracking-[0.2em] text-slate-600">
                 No leads here.
               </div>
             ) : null}

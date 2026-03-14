@@ -70,48 +70,42 @@ const MAIN_STAGES: Array<{
   label: string;
   description: string;
   accent: string;
-  chip: string;
-  panel: string;
+  hex: string;
 }> = [
   {
     id: "LEAD",
     label: "Lead",
     description: "New prospects ready for connection requests.",
     accent: "text-sky-300",
-    chip: "bg-sky-500/12 text-sky-200 border-sky-400/25",
-    panel: "border-sky-400/20 bg-slate-950/80",
+    hex: "#38bdf8",
   },
   {
     id: "CONNECT",
     label: "Connect",
     description: "Connection request sent and awaiting response.",
     accent: "text-indigo-300",
-    chip: "bg-indigo-500/12 text-indigo-200 border-indigo-400/25",
-    panel: "border-indigo-400/20 bg-slate-950/80",
+    hex: "#818cf8",
   },
   {
     id: "MESSAGE",
     label: "Message",
     description: "Accepted and actively being messaged.",
     accent: "text-violet-300",
-    chip: "bg-violet-500/12 text-violet-200 border-violet-400/25",
-    panel: "border-violet-400/20 bg-slate-950/80",
+    hex: "#a78bfa",
   },
   {
     id: "SCHEDULE_CALL",
     label: "Schedule Call",
     description: "Coordinating availability and booking a meeting.",
     accent: "text-amber-300",
-    chip: "bg-amber-500/12 text-amber-200 border-amber-400/25",
-    panel: "border-amber-400/20 bg-slate-950/80",
+    hex: "#fbbf24",
   },
   {
     id: "CLOSED",
     label: "Closed",
     description: "Won opportunities and completed deals.",
     accent: "text-emerald-300",
-    chip: "bg-emerald-500/12 text-emerald-200 border-emerald-400/25",
-    panel: "border-emerald-400/20 bg-slate-950/80",
+    hex: "#34d399",
   },
 ];
 
@@ -120,8 +114,7 @@ const REJECTED_STAGE = {
   label: "Rejected",
   description: "Archived out of the main flow.",
   accent: "text-rose-300",
-  chip: "bg-rose-500/12 text-rose-200 border-rose-400/25",
-  panel: "border-rose-400/20 bg-slate-950/80",
+  hex: "#fb7185",
 };
 
 const STATUS_TO_STAGE: Record<LeadStatus, StageId> = {
@@ -157,9 +150,9 @@ const STAGE_ORDER: StageId[] = [
 ];
 
 const PRIORITY_TONE: Record<string, string> = {
-  HIGH: "border-rose-400/30 bg-rose-500/10 text-rose-200",
-  MEDIUM: "border-amber-400/30 bg-amber-500/10 text-amber-200",
-  LOW: "border-slate-500/30 bg-slate-800 text-slate-300",
+  HIGH: "border-rose-400/40 bg-rose-500/10 text-rose-200",
+  MEDIUM: "border-amber-400/40 bg-amber-500/10 text-amber-200",
+  LOW: "border-slate-600 bg-slate-800 text-slate-300",
 };
 
 export default function PipelinePage() {
@@ -190,7 +183,8 @@ export default function PipelinePage() {
     };
   }, []);
 
-  const getStageId = (status: LeadStatus): StageId => STATUS_TO_STAGE[status] ?? "LEAD";
+  const getStageId = (status: LeadStatus): StageId =>
+    STATUS_TO_STAGE[status] ?? "LEAD";
 
   const getStageLeads = (stageId: StageId) =>
     leads.filter((lead) => getStageId(lead.status) === stageId);
@@ -238,35 +232,47 @@ export default function PipelinePage() {
 
   const totalLeads = leads.length;
   const closedLeads = getStageLeads("CLOSED").length;
-  const activeLeads = totalLeads - closedLeads - getStageLeads("REJECTED").length;
+  const activeLeads =
+    totalLeads - closedLeads - getStageLeads("REJECTED").length;
 
   return (
     <div className="space-y-6">
-      <section className="rounded-2xl border border-slate-800 bg-[radial-gradient(circle_at_top_left,rgba(56,189,248,0.08),transparent_35%),linear-gradient(180deg,#0f172a_0%,#020617_100%)] p-6 shadow-[0_18px_60px_rgba(2,6,23,0.45)]">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div className="max-w-3xl space-y-3">
-            <span className="inline-flex rounded-full border border-sky-400/20 bg-sky-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-sky-200">
+      {/* Header */}
+      <section className="relative overflow-hidden rounded-sm border-2 border-cyan-400/20 bg-[#07111f] p-5 shadow-[0_0_0_1px_rgba(8,145,178,0.08),inset_0_0_40px_rgba(8,145,178,0.06)]">
+        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(56,189,248,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(56,189,248,0.06)_1px,transparent_1px)] bg-[size:20px_20px]" />
+        <div className="relative flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-3xl space-y-2">
+            <span className="inline-flex rounded-sm border-2 border-sky-400/30 bg-sky-500/10 px-3 py-1 font-mono text-xs uppercase tracking-widest text-sky-200">
               Pipeline
             </span>
-            <div className="space-y-2">
-              <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-                Clean prospect flow from LinkedIn outreach to closed deal
-              </h1>
-              <p className="text-sm leading-6 text-slate-400 sm:text-base">
-                Lead starts as a scan-friendly list for connection requests, then moves through connect, message, scheduling, and close. Rejected leads stay visible, but out of the main flow.
-              </p>
-            </div>
+            <h1
+              className="text-2xl font-bold text-cyan-300 sm:text-3xl"
+              style={{
+                fontFamily: "var(--font-pixelify)",
+                textShadow: "0 0 18px rgba(34, 211, 238, 0.45)",
+              }}
+            >
+              Lead Pipeline
+            </h1>
+            <p className="text-sm leading-6 text-slate-400">
+              Lead starts as a scan-friendly list for connection requests, then
+              moves through connect, message, scheduling, and close.
+            </p>
           </div>
 
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap gap-2">
             <MetricChip label="Total Leads" value={String(totalLeads)} />
             <MetricChip label="Active Pipeline" value={String(activeLeads)} />
-            <MetricChip label="Closed" value={String(closedLeads)} accent="text-emerald-300" />
+            <MetricChip
+              label="Closed"
+              value={String(closedLeads)}
+              hex="#34d399"
+            />
             <Link
               href="/leads/new"
-              className="inline-flex items-center gap-2 rounded-xl border border-sky-400/25 bg-sky-500/10 px-4 py-3 text-sm font-medium text-sky-100 transition hover:bg-sky-500/20"
+              className="inline-flex items-center gap-2 rounded-sm border-2 border-sky-400/30 bg-sky-500/10 px-4 py-2.5 font-mono text-xs uppercase tracking-[0.2em] text-sky-100 transition hover:bg-sky-500/20"
             >
-              <Plus size={16} />
+              <Plus size={14} />
               Add lead
             </Link>
           </div>
@@ -274,7 +280,8 @@ export default function PipelinePage() {
       </section>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <div className="space-y-6">
+        <div className="space-y-4">
+          {/* Main stages */}
           <div className="grid gap-4 xl:grid-cols-5">
             {MAIN_STAGES.map((stage, index) => {
               const stageLeads = getStageLeads(stage.id);
@@ -282,31 +289,47 @@ export default function PipelinePage() {
               return (
                 <section
                   key={stage.id}
-                  className={`rounded-2xl border p-4 shadow-[0_10px_30px_rgba(2,6,23,0.28)] ${stage.panel}`}
+                  className="rounded-sm border-2 p-4 transition min-w-0"
+                  style={{
+                    borderColor: `${stage.hex}33`,
+                    backgroundColor: "#070f1c",
+                    boxShadow: `inset 0 0 20px ${stage.hex}08`,
+                  }}
                 >
-                  <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start justify-between gap-2">
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <h2 className={`text-base font-semibold ${stage.accent}`}>
+                        <h2
+                          className={`text-sm font-bold ${stage.accent}`}
+                          style={{ fontFamily: "var(--font-pixelify)" }}
+                        >
                           {stage.label}
                         </h2>
-                        <span className={`rounded-full border px-2 py-0.5 text-xs font-medium ${stage.chip}`}>
+                        <span
+                          className="rounded-sm border-2 px-1.5 py-0.5 font-mono text-[10px] font-medium"
+                          style={{
+                            borderColor: `${stage.hex}33`,
+                            color: stage.hex,
+                          }}
+                        >
                           {stageLeads.length}
                         </span>
                       </div>
-                      <p className="text-sm leading-5 text-slate-400">{stage.description}</p>
+                      <p className="text-xs leading-4 text-slate-500">
+                        {stage.description}
+                      </p>
                     </div>
                     {index < MAIN_STAGES.length - 1 ? (
-                      <ArrowRight className="mt-1 hidden h-4 w-4 text-slate-600 xl:block" />
+                      <ArrowRight className="mt-1 hidden h-3.5 w-3.5 text-slate-700 xl:block" />
                     ) : null}
                   </div>
 
-                  <div className="mt-4 space-y-3">
+                  <div className="mt-4 space-y-2">
                     {loading ? (
                       Array.from({ length: 3 }).map((_, skeletonIndex) => (
                         <div
                           key={`${stage.id}-${skeletonIndex}`}
-                          className="h-28 animate-pulse rounded-xl border border-slate-800 bg-slate-900/70"
+                          className="h-24 animate-pulse rounded-sm border-2 border-slate-800 bg-slate-900/70"
                         />
                       ))
                     ) : stage.id === "LEAD" ? (
@@ -337,7 +360,9 @@ export default function PipelinePage() {
                         ))}
                       </AnimatePresence>
                     ) : (
-                      <EmptyStage message={`No leads in ${stage.label.toLowerCase()}.`} />
+                      <EmptyStage
+                        message={`No leads in ${stage.label.toLowerCase()}.`}
+                      />
                     )}
                   </div>
                 </section>
@@ -345,25 +370,41 @@ export default function PipelinePage() {
             })}
           </div>
 
-          <section className={`rounded-2xl border p-4 shadow-[0_10px_30px_rgba(2,6,23,0.28)] ${REJECTED_STAGE.panel}`}>
+          {/* Rejected */}
+          <section
+            className="rounded-sm border-2 p-4"
+            style={{
+              borderColor: `${REJECTED_STAGE.hex}28`,
+              backgroundColor: "#070f1c",
+            }}
+          >
             <div className="flex items-center gap-2">
-              <h2 className={`text-base font-semibold ${REJECTED_STAGE.accent}`}>
+              <h2
+                className={`text-sm font-bold ${REJECTED_STAGE.accent}`}
+                style={{ fontFamily: "var(--font-pixelify)" }}
+              >
                 {REJECTED_STAGE.label}
               </h2>
-              <span className={`rounded-full border px-2 py-0.5 text-xs font-medium ${REJECTED_STAGE.chip}`}>
+              <span
+                className="rounded-sm border-2 px-1.5 py-0.5 font-mono text-[10px]"
+                style={{
+                  borderColor: `${REJECTED_STAGE.hex}33`,
+                  color: REJECTED_STAGE.hex,
+                }}
+              >
                 {getStageLeads("REJECTED").length}
               </span>
             </div>
-            <p className="mt-1 text-sm leading-5 text-slate-400">
-              Kept in a separate archive so the active pipeline stays clean.
+            <p className="mt-1 text-xs text-slate-500">
+              {REJECTED_STAGE.description}
             </p>
 
-            <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            <div className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
               {loading ? (
                 Array.from({ length: 3 }).map((_, skeletonIndex) => (
                   <div
                     key={`rejected-${skeletonIndex}`}
-                    className="h-28 animate-pulse rounded-xl border border-slate-800 bg-slate-900/70"
+                    className="h-24 animate-pulse rounded-sm border-2 border-slate-800 bg-slate-900/70"
                   />
                 ))
               ) : getStageLeads("REJECTED").length > 0 ? (
@@ -384,22 +425,26 @@ export default function PipelinePage() {
           </section>
         </div>
 
-        <aside className="rounded-2xl border border-slate-800 bg-slate-950/85 p-5 shadow-[0_14px_40px_rgba(2,6,23,0.35)]">
-          <div className="flex items-center justify-between gap-3 border-b border-slate-800 pb-4">
+        {/* Detail panel */}
+        <aside className="rounded-sm border-2 border-slate-700 bg-[#07111f] p-5 shadow-[inset_0_0_30px_rgba(2,6,23,0.5)] xl:w-[400px] flex-shrink-0">
+          <div className="flex items-center justify-between gap-3 border-b-2 border-slate-800 pb-4">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+              <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-slate-500">
                 Lead Detail
               </p>
-              <h2 className="mt-1 text-xl font-semibold text-white">
+              <h2
+                className="mt-1 text-lg font-bold text-white"
+                style={{ fontFamily: "var(--font-pixelify)" }}
+              >
                 {selectedLead ? selectedLead.company : "Select a lead"}
               </h2>
             </div>
             {selectedLead ? (
               <Link
                 href={`/leads/${selectedLead.id}`}
-                className="inline-flex items-center gap-2 rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-300 transition hover:border-slate-600 hover:text-white"
+                className="inline-flex items-center gap-2 rounded-sm border-2 border-slate-700 px-3 py-2 font-mono text-xs uppercase tracking-[0.2em] text-slate-300 transition hover:border-slate-600 hover:text-white"
               >
-                <UserRound size={14} />
+                <UserRound size={13} />
                 Open
               </Link>
             ) : null}
@@ -410,19 +455,25 @@ export default function PipelinePage() {
               key={selectedLead.id}
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              className="space-y-5 pt-5"
+              className="space-y-4 pt-5"
             >
-              <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
+              <div className="rounded-sm border-2 border-slate-800 bg-slate-900/50 p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="space-y-1">
-                    <p className="text-lg font-semibold text-white">{selectedLead.company}</p>
+                    <p
+                      className="text-base font-bold text-white"
+                      style={{ fontFamily: "var(--font-pixelify)" }}
+                    >
+                      {selectedLead.company}
+                    </p>
                     <p className="text-sm text-slate-400">
                       {selectedLead.contact ?? "No contact name"}
                     </p>
                   </div>
                   <span
-                    className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${
-                      PRIORITY_TONE[selectedLead.priority] ?? PRIORITY_TONE.MEDIUM
+                    className={`rounded-sm border-2 px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.2em] ${
+                      PRIORITY_TONE[selectedLead.priority] ??
+                      PRIORITY_TONE.MEDIUM
                     }`}
                   >
                     {selectedLead.priority}
@@ -430,35 +481,51 @@ export default function PipelinePage() {
                 </div>
 
                 <div className="mt-4 space-y-3 text-sm">
-                  <DetailRow label="Stage" value={getStageId(selectedLead.status)} />
-                  <DetailRow label="Source" value={selectedLead.source ?? "Not set"} />
-                  <DetailRow label="Email" value={selectedLead.email ?? "Not set"} />
-                  <DetailRow label="Phone" value={selectedLead.phone ?? "Not set"} />
+                  <DetailRow
+                    label="Stage"
+                    value={getStageId(selectedLead.status)}
+                  />
+                  <DetailRow
+                    label="Source"
+                    value={selectedLead.source ?? "Not set"}
+                  />
+                  <DetailRow
+                    label="Email"
+                    value={selectedLead.email ?? "Not set"}
+                  />
+                  <DetailRow
+                    label="Phone"
+                    value={selectedLead.phone ?? "Not set"}
+                  />
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
-                <p className="text-sm font-semibold text-white">Quick Actions</p>
+              <div className="rounded-sm border-2 border-slate-800 bg-slate-900/50 p-4">
+                <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-slate-500">
+                  Quick Actions
+                </p>
                 <div className="mt-3 grid gap-2">
-                  {STAGE_ORDER.filter((stageId) => stageId !== getStageId(selectedLead.status)).map(
-                    (stageId) => (
-                      <button
-                        key={stageId}
-                        type="button"
-                        onClick={() => moveLead(selectedLead, stageId)}
-                        disabled={updatingLeadId === selectedLead.id}
-                        className="flex items-center justify-between rounded-xl border border-slate-700 bg-slate-950/90 px-3 py-3 text-left text-sm text-slate-200 transition hover:border-slate-600 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        <span>{stageId.replace("_", " ")}</span>
-                        <ChevronRight size={16} className="text-slate-500" />
-                      </button>
-                    )
-                  )}
+                  {STAGE_ORDER.filter(
+                    (stageId) => stageId !== getStageId(selectedLead.status)
+                  ).map((stageId) => (
+                    <button
+                      key={stageId}
+                      type="button"
+                      onClick={() => moveLead(selectedLead, stageId)}
+                      disabled={updatingLeadId === selectedLead.id}
+                      className="flex items-center justify-between rounded-sm border-2 border-slate-700 bg-slate-950/90 px-3 py-2.5 text-left font-mono text-xs uppercase tracking-[0.2em] text-slate-300 transition hover:border-slate-600 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <span>{stageId.replace("_", " ")}</span>
+                      <ChevronRight size={14} className="text-slate-500" />
+                    </button>
+                  ))}
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
-                <p className="text-sm font-semibold text-white">Notes</p>
+              <div className="rounded-sm border-2 border-slate-800 bg-slate-900/50 p-4">
+                <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-slate-500">
+                  Notes
+                </p>
                 <p className="mt-2 text-sm leading-6 text-slate-400">
                   {selectedLead.notes ?? "No notes yet."}
                 </p>
@@ -466,8 +533,9 @@ export default function PipelinePage() {
             </motion.div>
           ) : (
             <div className="pt-5">
-              <div className="rounded-2xl border border-dashed border-slate-800 bg-slate-900/50 p-6 text-sm leading-6 text-slate-500">
-                Select any lead to review contact details, open the full record, or move it to the next pipeline stage.
+              <div className="rounded-sm border-2 border-dashed border-slate-800 bg-slate-900/50 p-6 font-mono text-xs uppercase tracking-[0.2em] text-slate-600">
+                Select any lead to review contact details, open the full record,
+                or move it to the next stage.
               </div>
             </div>
           )}
@@ -492,22 +560,31 @@ function LeadListRow({
 }) {
   return (
     <div
-      className={`w-full rounded-2xl border p-4 text-left transition ${
+      className={`w-full rounded-sm border-2 p-3 text-left transition ${
         selected
-          ? "border-sky-400/40 bg-sky-500/10 shadow-[0_0_0_1px_rgba(56,189,248,0.15)]"
-          : "border-slate-800 bg-slate-900/80 hover:border-slate-700"
+          ? "border-sky-400/40 bg-sky-500/10 shadow-[0_0_14px_rgba(56,189,248,0.1)]"
+          : "border-slate-800 bg-[#0a1422] hover:border-slate-700"
       }`}
     >
-      <button type="button" onClick={onSelect} className="block w-full text-left">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0 space-y-1">
-            <p className="truncate text-base font-semibold text-white">{lead.company}</p>
-            <p className="truncate text-sm text-slate-400">
+      <button
+        type="button"
+        onClick={onSelect}
+        className="block w-full text-left"
+      >
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0 flex-1 space-y-0.5">
+            <p
+              className="break-words text-sm font-bold text-white"
+              style={{ fontFamily: "var(--font-pixelify)" }}
+            >
+              {lead.company}
+            </p>
+            <p className="break-words text-xs text-slate-400">
               {lead.contact ?? "No contact name"}
             </p>
           </div>
           <span
-            className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${
+            className={`rounded-sm border-2 px-2 py-0.5 font-mono text-[10px] uppercase ${
               PRIORITY_TONE[lead.priority] ?? PRIORITY_TONE.MEDIUM
             }`}
           >
@@ -515,44 +592,44 @@ function LeadListRow({
           </span>
         </div>
 
-        <div className="mt-3 rounded-xl border border-slate-800 bg-slate-950/80 p-3">
-          <div className="flex items-start gap-2 text-sm text-slate-300">
-            <Linkedin size={16} className="mt-0.5 shrink-0 text-sky-300" />
+        <div className="mt-2 rounded-sm border-2 border-slate-800 bg-slate-950/80 px-2.5 py-2">
+          <div className="flex items-start gap-2 text-xs text-slate-300">
+            <Linkedin size={13} className="mt-0.5 shrink-0 text-sky-300" />
             <div className="min-w-0">
               {lead.linkedin ? (
                 <span className="truncate text-sky-200">{lead.linkedin}</span>
               ) : (
-                <span className="text-slate-500">No LinkedIn URL</span>
+                <span className="text-slate-600">No LinkedIn URL</span>
               )}
             </div>
           </div>
         </div>
       </button>
 
-      <div className="mt-4 flex items-center justify-between gap-3">
+      <div className="mt-3 flex items-center justify-between gap-2">
         {lead.linkedin ? (
           <a
             href={lead.linkedin}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex min-w-0 items-center gap-2 text-sm font-medium text-sky-300 transition hover:text-sky-200"
+            className="inline-flex min-w-0 items-center gap-1.5 font-mono text-xs uppercase tracking-[0.18em] text-sky-300 transition hover:text-sky-200"
           >
-            <ExternalLink size={14} className="shrink-0" />
+            <ExternalLink size={12} className="shrink-0" />
             <span className="truncate">Open LinkedIn</span>
           </a>
         ) : (
-          <p className="text-xs uppercase tracking-[0.18em] text-slate-500">
-            Add a LinkedIn URL to action this lead
+          <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-slate-600">
+            Add LinkedIn URL
           </p>
         )}
         <button
           type="button"
           onClick={onMove}
           disabled={busy}
-          className="inline-flex items-center gap-2 rounded-lg border border-sky-400/25 bg-sky-500/10 px-3 py-2 text-sm font-medium text-sky-100 transition hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 rounded-sm border-2 border-sky-400/30 bg-sky-500/10 px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-[0.2em] text-sky-100 transition hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          <ArrowRight size={14} />
-          {busy ? "Moving..." : "Move to Connect"}
+          <ArrowRight size={12} />
+          {busy ? "Moving..." : "Connect"}
         </button>
       </div>
     </div>
@@ -577,21 +654,26 @@ function FlowCard({
       layout
       type="button"
       onClick={onSelect}
-      className={`w-full rounded-2xl border p-4 text-left transition ${
+      className={`w-full rounded-sm border-2 p-3 text-left transition ${
         selected
-          ? "border-slate-600 bg-slate-900 shadow-[0_0_0_1px_rgba(148,163,184,0.12)]"
-          : "border-slate-800 bg-slate-900/80 hover:border-slate-700"
+          ? "border-slate-600 bg-slate-900 shadow-[0_0_12px_rgba(148,163,184,0.1)]"
+          : "border-slate-800 bg-[#0a1422] hover:border-slate-700"
       }`}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="truncate text-base font-semibold text-white">{lead.company}</p>
-          <p className="mt-1 truncate text-sm text-slate-400">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <p
+            className="break-words text-sm font-bold text-white"
+            style={{ fontFamily: "var(--font-pixelify)" }}
+          >
+            {lead.company}
+          </p>
+          <p className="mt-0.5 break-words text-xs text-slate-400">
             {lead.contact ?? "No contact name"}
           </p>
         </div>
         <span
-          className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${
+          className={`rounded-sm border-2 px-2 py-0.5 font-mono text-[10px] uppercase ${
             PRIORITY_TONE[lead.priority] ?? PRIORITY_TONE.MEDIUM
           }`}
         >
@@ -599,19 +681,19 @@ function FlowCard({
         </span>
       </div>
 
-      <div className="mt-4 grid gap-2 text-sm text-slate-400">
+      <div className="mt-3 grid gap-1.5 text-xs text-slate-400">
         {lead.email ? (
-          <InlineInfo icon={<Mail size={14} />} value={lead.email} />
+          <InlineInfo icon={<Mail size={12} />} value={lead.email} />
         ) : null}
         {lead.phone ? (
-          <InlineInfo icon={<Phone size={14} />} value={lead.phone} />
+          <InlineInfo icon={<Phone size={12} />} value={lead.phone} />
         ) : null}
         {!compact && lead.linkedin ? (
-          <InlineInfo icon={<Linkedin size={14} />} value={lead.linkedin} />
+          <InlineInfo icon={<Linkedin size={12} />} value={lead.linkedin} />
         ) : null}
       </div>
 
-      <div className="mt-4 flex items-center justify-between text-xs text-slate-500">
+      <div className="mt-3 flex items-center justify-between font-mono text-[10px] uppercase tracking-widest text-slate-600">
         <span>{busy ? "Updating..." : "Ready"}</span>
         {getStageIdLabel(lead.status)}
       </div>
@@ -627,8 +709,8 @@ function InlineInfo({
   value: string;
 }) {
   return (
-    <div className="flex items-center gap-2 truncate">
-      <span className="shrink-0 text-slate-500">{icon}</span>
+    <div className="flex items-center gap-1.5 truncate">
+      <span className="shrink-0 text-slate-600">{icon}</span>
       <span className="truncate">{value}</span>
     </div>
   );
@@ -636,7 +718,7 @@ function InlineInfo({
 
 function EmptyStage({ message }: { message: string }) {
   return (
-    <div className="rounded-2xl border border-dashed border-slate-800 bg-slate-900/40 p-4 text-sm text-slate-500">
+    <div className="rounded-sm border-2 border-dashed border-slate-800 bg-slate-900/30 p-3 font-mono text-[10px] uppercase tracking-[0.2em] text-slate-600">
       {message}
     </div>
   );
@@ -645,29 +727,43 @@ function EmptyStage({ message }: { message: string }) {
 function MetricChip({
   label,
   value,
-  accent = "text-white",
+  hex = "#94a3b8",
 }: {
   label: string;
   value: string;
-  accent?: string;
+  hex?: string;
 }) {
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-950/85 px-4 py-3">
-      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+    <div
+      className="rounded-sm border-2 bg-[#07111f] px-3 py-2"
+      style={{ borderColor: `${hex}33` }}
+    >
+      <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-slate-500">
         {label}
       </p>
-      <p className={`mt-1 text-xl font-semibold ${accent}`}>{value}</p>
+      <p
+        className="mt-1 text-xl font-bold"
+        style={{
+          color: hex,
+          fontFamily: "var(--font-pixelify)",
+          textShadow: `0 0 12px ${hex}55`,
+        }}
+      >
+        {value}
+      </p>
     </div>
   );
 }
 
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between gap-3 border-b border-slate-800 pb-3 last:border-b-0 last:pb-0">
-      <span className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+    <div className="flex items-start justify-between gap-3 border-b-2 border-slate-800 pb-3 last:border-b-0 last:pb-0">
+      <span className="shrink-0 font-mono text-[10px] uppercase tracking-[0.2em] text-slate-500">
         {label}
       </span>
-      <span className="max-w-[65%] text-right text-sm text-slate-200">{value}</span>
+      <span className="max-w-[70%] break-words text-right text-sm text-slate-200">
+        {value}
+      </span>
     </div>
   );
 }
@@ -678,7 +774,7 @@ function getStageIdLabel(status: LeadStatus) {
   if (stage === "CLOSED") {
     return (
       <span className="inline-flex items-center gap-1 text-emerald-300">
-        <CheckCircle2 size={14} />
+        <CheckCircle2 size={12} />
         Closed
       </span>
     );
@@ -687,7 +783,7 @@ function getStageIdLabel(status: LeadStatus) {
   if (stage === "REJECTED") {
     return (
       <span className="inline-flex items-center gap-1 text-rose-300">
-        <XCircle size={14} />
+        <XCircle size={12} />
         Rejected
       </span>
     );
